@@ -1,0 +1,24 @@
+[project]
+name = "ruff-docstrings-complete"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Ali Ugur", email = "ali.ugur@canonical.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "pytest>=8.3.5",
+]
+
+[project.scripts]
+ruff-docstrings-complete = "ruff_docstrings_complete:main"
+
+[tool.maturin]
+module-name = "ruff_docstrings_complete._core"
+python-packages = ["ruff_docstrings_complete"]
+python-source = "src"
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
