@@ -1,0 +1,6 @@
+/home/ali-ugur/Documents/ruff-docstrings-complete/target/debug/deps/lib_core-fbf72537cc32c9aa.rmeta: src/lib.rs src/docstring.rs
+
+/home/ali-ugur/Documents/ruff-docstrings-complete/target/debug/deps/_core-fbf72537cc32c9aa.d: src/lib.rs src/docstring.rs
+
+src/lib.rs:
+src/docstring.rs:

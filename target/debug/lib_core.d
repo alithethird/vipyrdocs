@@ -1,0 +1,1 @@
+/home/ali-ugur/Documents/ruff-docstrings-complete/target/debug/lib_core.so: /home/ali-ugur/Documents/ruff-docstrings-complete/src/docstring.rs /home/ali-ugur/Documents/ruff-docstrings-complete/src/lib.rs
