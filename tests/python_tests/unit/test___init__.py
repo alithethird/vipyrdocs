@@ -9,87 +9,131 @@ import pytest
 
 
 from . import result
+from ruff_docstrings_complete._core import apply_rules
 
+from ruff_docstrings_complete._core import constants
+
+ERROR_CODE_PREFIX = constants.ERROR_CODE_PREFIX
+MORE_INFO_BASE = constants.MORE_INFO_BASE
+
+DOCSTR_MISSING_CODE = constants.DOCSTR_MISSING_CODE
+DOCSTR_MISSING_MSG = constants.DOCSTR_MISSING_MSG
+
+
+RETURNS_SECTION_NOT_IN_DOCSTR_CODE = f"{ERROR_CODE_PREFIX}030"
+RETURNS_SECTION_NOT_IN_DOCSTR_MSG = (
+    f"{RETURNS_SECTION_NOT_IN_DOCSTR_CODE} function/ method that returns a value should have the "
+    f"returns section in the docstring{MORE_INFO_BASE}{RETURNS_SECTION_NOT_IN_DOCSTR_CODE.lower()}"
+)
+RETURNS_SECTION_IN_DOCSTR_CODE = f"{ERROR_CODE_PREFIX}031"
+RETURNS_SECTION_IN_DOCSTR_MSG = (
+    f"{RETURNS_SECTION_IN_DOCSTR_CODE} function/ method that does not return a value should not "
+    f"have the returns section in the docstring"
+    f"{MORE_INFO_BASE}{RETURNS_SECTION_IN_DOCSTR_CODE.lower()}"
+)
+MULT_RETURNS_SECTIONS_IN_DOCSTR_CODE = f"{ERROR_CODE_PREFIX}032"
+MULT_RETURNS_SECTIONS_IN_DOCSTR_MSG = (
+    f"{MULT_RETURNS_SECTIONS_IN_DOCSTR_CODE} a docstring should only contain a single returns "
+    "section, found %s"
+    f"{MORE_INFO_BASE}{MULT_RETURNS_SECTIONS_IN_DOCSTR_CODE.lower()}"
+)
+YIELDS_SECTION_NOT_IN_DOCSTR_CODE = f"{ERROR_CODE_PREFIX}040"
+YIELDS_SECTION_NOT_IN_DOCSTR_MSG = (
+    f"{YIELDS_SECTION_NOT_IN_DOCSTR_CODE} function/ method that yields a value should have the "
+    f"yields section in the docstring{MORE_INFO_BASE}{YIELDS_SECTION_NOT_IN_DOCSTR_CODE.lower()}"
+)
+YIELDS_SECTION_IN_DOCSTR_CODE = f"{ERROR_CODE_PREFIX}041"
+YIELDS_SECTION_IN_DOCSTR_MSG = (
+    f"{YIELDS_SECTION_IN_DOCSTR_CODE} function/ method that does not yield a value should not "
+    f"have the yields section in the docstring"
+    f"{MORE_INFO_BASE}{YIELDS_SECTION_IN_DOCSTR_CODE.lower()}"
+)
+MULT_YIELDS_SECTIONS_IN_DOCSTR_CODE = f"{ERROR_CODE_PREFIX}042"
+MULT_YIELDS_SECTIONS_IN_DOCSTR_MSG = (
+    f"{MULT_YIELDS_SECTIONS_IN_DOCSTR_CODE} a docstring should only contain a single yields "
+    "section, found %s"
+    f"{MORE_INFO_BASE}{MULT_YIELDS_SECTIONS_IN_DOCSTR_CODE.lower()}"
+)
 
 @pytest.mark.parametrize(
     "code, expected_result",
     [
         pytest.param("", (), id="trivial"),
-#         pytest.param(
-#             """
-# def function_1():
-#     return
-# """,
-#             (f"2:0 {DOCSTR_MISSING_MSG}",),
-#             id="function docstring missing return",
-#         ),
-#         pytest.param(
-#             """
-# def _function_1():
-#     return
-# """,
-#             (f"2:0 {DOCSTR_MISSING_MSG}",),
-#             id="private function docstring missing return",
-#         ),
-#         pytest.param(
-#             """
-# @overload
-# def function_1():
-#     ...
-# """,
-#             (),
-#             id="function docstring missing overload",
-#         ),
-#         pytest.param(
-#             """
-# @overload()
-# def function_1():
-#     ...
-# """,
-#             (),
-#             id="function docstring missing overload call",
-#         ),
-#         pytest.param(
-#             """
-# @typing.overload
-# def function_1():
-#     ...
-# """,
-#             (),
-#             id="function docstring missing overload attr",
-#         ),
-#         pytest.param(
-#             """
-# def function_1():
-#     return
+        pytest.param(
+            """
+def function_1():
+    return
+""",
+            (f"2:0 {DOCSTR_MISSING_MSG}",),
+            id="function docstring missing return",
+        ),
+        pytest.param(
+            """
+def _function_1():
+    return
+""",
+            (f"2:0 {DOCSTR_MISSING_MSG}",),
+            id="private function docstring missing return",
+        ),
+        pytest.param(
+            """
+@overload
+def function_1():
+    ...
+""",
+            (),
+            id="function docstring missing overload",
+        ),
+        pytest.param(
+            """
+@overload()
+def function_1():
+    ...
+""",
+            (),
+            id="function docstring missing overload call",
+        ),
+        pytest.param(
+            """
+@typing.overload
+def function_1():
+    ...
+""",
+            (),
+            id="function docstring missing overload attr",
+        ),
+        pytest.param(
+            """
+def function_1():
+    return
 
-# def function_2():
-#     return
-# """,
-#             (f"2:0 {DOCSTR_MISSING_MSG}", f"5:0 {DOCSTR_MISSING_MSG}"),
-#             id="multiple functions docstring missing return",
-#         ),
-#         pytest.param(
-#             """
-# def function_1():
-#     pass
-# """,
-#             (f"2:0 {DOCSTR_MISSING_MSG}",),
-#             id="function docstring missing expression not constant",
-#         ),
-#         pytest.param(
-#             """
-# def function_1():
-#     1
-# """,
-#             (f"2:0 {DOCSTR_MISSING_MSG}",),
-#             id="function docstring missing expression constnant not string",
-#         ),
+def function_2():
+    return
+""",
+            (f"2:0 {DOCSTR_MISSING_MSG}", f"5:0 {DOCSTR_MISSING_MSG}"),
+            id="multiple functions docstring missing return",
+        ),
+        pytest.param(
+            """
+def function_1():
+    pass
+""",
+            (f"2:0 {DOCSTR_MISSING_MSG}",),
+            id="function docstring missing expression not constant",
+        ),
+        pytest.param(
+            """
+def function_1():
+    1
+""",
+            (f"2:0 {DOCSTR_MISSING_MSG}",),
+            id="function docstring missing expression constnant not string",
+        ),
 #         pytest.param(
 #             '''
 # def function_1():
 #     """Docstring.
-
+# 
 #     Returns:
 #     """
 # ''',
@@ -162,96 +206,96 @@ from . import result
 #             (f"5:8 {MULT_RETURNS_SECTIONS_IN_DOCSTR_MSG % 'Returns,Returns'}",),
 #             id="method return multiple returns in docstring",
 #         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     return 1
-# ''',
-#             (f"4:4 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="function single return value returns not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     return 0
-# ''',
-#             (f"4:4 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="function single falsely return value returns not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     return None
-# ''',
-#             (f"4:4 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="function single None return value returns not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# async def function_1():
-#     """Docstring."""
-#     return 1
-# ''',
-#             (f"4:4 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="async function single return value returns not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# class FooClass:
-#     """Docstring."""
-#     def function_1(self):
-#         """Docstring."""
-#         return 1
-# ''',
-#             (f"6:8 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="method single return value returns not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     if True:
-#         return 1
-# ''',
-#             (f"5:8 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="function single nested return value returns not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     return 11
-#     return 12
-# ''',
-#             (
-#                 f"4:4 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",
-#                 f"5:4 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",
-#             ),
-#             id="function multiple return value returns not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     return 11
-#     return
-# ''',
-#             (f"4:4 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="function multiple return first value returns not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     return
-#     return 12
-# ''',
-#             (f"5:4 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="function multiple return second value returns not in docstring",
-#         ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    return 1
+''',
+            (f"4:4 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="function single return value returns not in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    return 0
+''',
+            (f"4:4 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="function single falsely return value returns not in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    return None
+''',
+            (f"4:4 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="function single None return value returns not in docstring",
+        ),
+        pytest.param(
+            '''
+async def function_1():
+    """Docstring."""
+    return 1
+''',
+            (f"4:4 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="async function single return value returns not in docstring",
+        ),
+        pytest.param(
+            '''
+class FooClass:
+    """Docstring."""
+    def function_1(self):
+        """Docstring."""
+        return 1
+''',
+            (f"6:8 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="method single return value returns not in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    if True:
+        return 1
+''',
+            (f"5:8 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="function single nested return value returns not in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    return 11
+    return 12
+''',
+            (
+                f"4:4 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",
+                f"5:4 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",
+            ),
+            id="function multiple return value returns not in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    return 11
+    return
+''',
+            (f"4:4 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="function multiple return first value returns not in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    return
+    return 12
+''',
+            (f"5:4 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="function multiple return second value returns not in docstring",
+        ),
 #         pytest.param(
 #             '''
 # def function_1():
@@ -511,16 +555,16 @@ from . import result
 #             (),
 #             id="async function docstring",
 #         ),
-#         pytest.param(
-#             '''
-# class Class1:
-#     """Docstring."""
-#     def function_1(self):
-#         return
-# ''',
-#             (f"4:4 {DOCSTR_MISSING_MSG}",),
-#             id="method docstring missing return",
-#         ),
+        pytest.param(
+            '''
+class Class1:
+    """Docstring."""
+    def function_1(self):
+        return
+''',
+            (f"4:4 {DOCSTR_MISSING_MSG}",),
+            id="method docstring missing return",
+        ),
 #         pytest.param(
 #             '''
 # def function_1():
@@ -835,175 +879,185 @@ def test_plugin(code: str, expected_result: tuple[str, ...]):
     when: linting is run on the code
     then: the expected result is returned
     """
-    assert result.get(code) == expected_result
+    assert tuple(apply_rules(code)) == expected_result
 
 
-# @pytest.mark.parametrize(
-#     "code, filename, expected_result",
-#     [
-#         pytest.param(
-#             """
-# def test_():
-#     pass
-# """,
-#             "source.py",
-#             (f"2:0 {DOCSTR_MISSING_MSG}",),
-#             id="not test file",
-#         ),
-#         pytest.param(
-#             """
-# def foo():
-#     pass
-# """,
-#             "test_.py",
-#             (f"2:0 {DOCSTR_MISSING_MSG}",),
-#             id="test file not test function",
-#         ),
-#         pytest.param(
-#             """
-# def test_():
-#     pass
-# """,
-#             "test_.py",
-#             (),
-#             id="test file test function",
-#         ),
-#         pytest.param(
-#             """
-# def test_():
-#     pass
-# """,
-#             "tests/test_.py",
-#             (),
-#             id="test file test function in directory",
-#         ),
-#         pytest.param(
-#             """
-# def foo():
-#     pass
-# """,
-#             "conftest.py",
-#             (f"2:0 {DOCSTR_MISSING_MSG}",),
-#             id="normal file not fixture function",
-#         ),
-#         pytest.param(
-#             """
-# @fixture
-# def foo():
-#     pass
-# """,
-#             "source.py",
-#             (f"3:0 {DOCSTR_MISSING_MSG}",),
-#             id="source file fixture function",
-#         ),
-#         pytest.param(
-#             """
-# @fixture
-# def foo():
-#     pass
-# """,
-#             "conftest.py",
-#             (),
-#             id="fixture file fixture function",
-#         ),
-#         pytest.param(
-#             """
-# @fixture
-# def foo():
-#     pass
-# """,
-#             "test_.py",
-#             (),
-#             id="test file fixture function",
-#         ),
-#         pytest.param(
-#             """
-# @FIXTURE
-# def foo():
-#     pass
-# """,
-#             "conftest.py",
-#             (),
-#             id="fixture file fixture function capitalised",
-#         ),
-#         pytest.param(
-#             """
-# @fixture
-# @decorator
-# def foo():
-#     pass
-# """,
-#             "conftest.py",
-#             (),
-#             id="fixture file fixture function multiple decorators first",
-#         ),
-#         pytest.param(
-#             """
-# @decorator
-# @fixture
-# def foo():
-#     pass
-# """,
-#             "conftest.py",
-#             (),
-#             id="fixture file fixture function multiple decorators second",
-#         ),
-#         pytest.param(
-#             """
-# @pytest.fixture
-# def foo():
-#     pass
-# """,
-#             "conftest.py",
-#             (),
-#             id="fixture file fixture function prefix",
-#         ),
-#         pytest.param(
-#             """
-# @pytest.fixture(scope="module")
-# def foo():
-#     pass
-# """,
-#             "conftest.py",
-#             (),
-#             id="fixture file fixture function prefix call",
-#         ),
-#         pytest.param(
-#             """
-# @additional.pytest.fixture
-# def foo():
-#     pass
-# """,
-#             "conftest.py",
-#             (),
-#             id="fixture file fixture function nested prefix",
-#         ),
-#         pytest.param(
-#             """
-# @fixture(scope="module")
-# def foo():
-#     pass
-# """,
-#             "conftest.py",
-#             (),
-#             id="fixture file fixture function arguments",
-#         ),
-#         pytest.param(
-#             """
-# @fixture
-# def foo():
-#     pass
-# """,
-#             "tests/conftest.py",
-#             (),
-#             id="fixture file fixture function in directory",
-#         ),
-#     ],
-# )
-# def test_plugin_filename(code: str, filename: str, expected_result: tuple[str, ...]):
-#     """
-#     given: code and filename
-#     when: linting is run on the code
-#     then: the expected result is returned
-#     """
-#     assert result.get(code, filename) == expected_result
+@pytest.mark.parametrize(
+    "code, filename, expected_result",
+    [
+        pytest.param(
+            """
+def test_():
+    pass
+""",
+            "source.py",
+            (f"2:0 {DOCSTR_MISSING_MSG}",),
+            id="not test file",
+        ),
+        pytest.param(
+            """
+def foo():
+    pass
+""",
+            "test_.py",
+            (f"2:0 {DOCSTR_MISSING_MSG}",),
+            id="test file not test function",
+        ),
+        pytest.param(
+            """
+def test_():
+    pass
+""",
+            "test_.py",
+            (),
+            id="test file test function",
+        ),
+        pytest.param(
+            """
+def test_():
+    pass
+""",
+            "tests/test_.py",
+            (),
+            id="test file test function in directory",
+        ),
+        pytest.param(
+            """
+def foo():
+    pass
+""",
+            "conftest.py",
+            (f"2:0 {DOCSTR_MISSING_MSG}",),
+            id="normal file not fixture function",
+        ),
+        pytest.param(
+            """
+@fixture
+def foo():
+    pass
+""",
+            "source.py",
+            (f"3:0 {DOCSTR_MISSING_MSG}",),
+            id="source file fixture function",
+        ),
+        pytest.param(
+            """
+@fixture
+def foo():
+    pass
+""",
+            "conftest.py",
+            (),
+            id="fixture file fixture function",
+        ),
+        pytest.param(
+            """
+@fixture
+def foo():
+    pass
+""",
+            "test_.py",
+            (),
+            id="test file fixture function",
+        ),
+        pytest.param(
+            """
+@FIXTURE
+def foo():
+    pass
+""",
+            "conftest.py",
+            (),
+            id="fixture file fixture function capitalised",
+        ),
+        pytest.param(
+            """
+@fixture
+@decorator
+def foo():
+    pass
+""",
+            "conftest.py",
+            (),
+            id="fixture file fixture function multiple decorators first",
+        ),
+        pytest.param(
+            """
+@decorator
+@fixture
+def foo():
+    pass
+""",
+            "conftest.py",
+            (),
+            id="fixture file fixture function multiple decorators second",
+        ),
+        pytest.param(
+            """
+@pytest.fixture
+def foo():
+    pass
+""",
+            "conftest.py",
+            (),
+            id="fixture file fixture function prefix",
+        ),
+        pytest.param(
+            """
+@pytest.fixture(scope="module")
+def foo():
+    pass
+""",
+            "conftest.py",
+            (),
+            id="fixture file fixture function prefix call",
+        ),
+        pytest.param(
+            """
+@additional.pytest.fixture
+def foo():
+    pass
+""",
+            "conftest.py",
+            (),
+            id="fixture file fixture function nested prefix",
+        ),
+        pytest.param(
+            """
+@additional.something.pytest.fixture
+def foo():
+    pass
+""",
+            "conftest.py",
+            (),
+            id="fixture file fixture function double nested prefix",
+        ),
+        pytest.param(
+            """
+@fixture(scope="module")
+def foo():
+    pass
+""",
+            "conftest.py",
+            (),
+            id="fixture file fixture function arguments",
+        ),
+        pytest.param(
+            """
+@fixture
+def foo():
+    pass
+""",
+            "tests/conftest.py",
+            (),
+            id="fixture file fixture function in directory",
+        ),
+    ],
+)
+def test_plugin_filename(code: str, filename: str, expected_result: tuple[str, ...]):
+    """
+    given: code and filename
+    when: linting is run on the code
+    then: the expected result is returned
+    """
+    assert tuple(apply_rules(code, filename)) == expected_result

@@ -1,46 +1,47 @@
-# """Unit tests for args checks in the plugin."""
+"""Unit tests for args checks in the plugin."""
 
-# from __future__ import annotations
+from __future__ import annotations
 
-# import pytest
+import pytest
 
-# from ruff_docstrings_complete.args import (
-#     ARG_IN_DOCSTR_MSG,
-#     ARG_NOT_IN_DOCSTR_MSG,
-#     ARGS_SECTION_IN_DOCSTR_MSG,
-#     ARGS_SECTION_NOT_IN_DOCSTR_MSG,
-#     DUPLICATE_ARG_MSG,
-#     MULT_ARGS_SECTIONS_IN_DOCSTR_MSG,
-# )
+from ruff_docstrings_complete._core.constants import (
+    ARG_IN_DOCSTR_MSG,
+    ARG_NOT_IN_DOCSTR_MSG,
+    ARGS_SECTION_IN_DOCSTR_MSG,
+    ARGS_SECTION_NOT_IN_DOCSTR_MSG,
+    DUPLICATE_ARG_MSG,
+    MULT_ARGS_SECTIONS_IN_DOCSTR_MSG,
+)
 
+from ruff_docstrings_complete._core import apply_rules
 # from . import result
 
 
-# @pytest.mark.parametrize(
-#     "code, expected_result",
-#     [
-#         pytest.param(
-#             '''
-# def function_1(arg_1):
-#     """Docstring 1."""
-# ''',
-#             (f"3:4 {ARGS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="function has single arg docstring no args section",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1(arg_1):
-#     """Docstring 1."""
+@pytest.mark.parametrize(
+    "code, expected_result",
+    [
+        pytest.param(
+            '''
+def function_1(arg_1):
+    """Docstring 1."""
+''',
+            (f"3:4 {ARGS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="function has single arg docstring no args section",
+        ),
+        pytest.param(
+            '''
+def function_1(arg_1):
+    """Docstring 1."""
 
-# def function_2(arg_2):
-#     """Docstring 2."""
-# ''',
-#             (
-#                 f"3:4 {ARGS_SECTION_NOT_IN_DOCSTR_MSG}",
-#                 f"6:4 {ARGS_SECTION_NOT_IN_DOCSTR_MSG}",
-#             ),
-#             id="multiple function has single arg docstring no args section",
-#         ),
+def function_2(arg_2):
+    """Docstring 2."""
+''',
+            (
+                f"3:4 {ARGS_SECTION_NOT_IN_DOCSTR_MSG}",
+                f"6:4 {ARGS_SECTION_NOT_IN_DOCSTR_MSG}",
+            ),
+            id="multiple function has single arg docstring no args section",
+        ),
 #         pytest.param(
 #             '''
 # def function_1():
@@ -748,12 +749,12 @@
 #             (),
 #             id="method single arg docstring single arg classmethod",
 #         ),
-#     ],
-# )
-# def test_plugin(code: str, expected_result: tuple[str, ...]):
-#     """
-#     given: code
-#     when: linting is run on the code
-#     then: the expected result is returned
-#     """
-#     assert result.get(code) == expected_result
+    ],
+)
+def test_plugin(code: str, expected_result: tuple[str, ...]):
+    """
+    given: code
+    when: linting is run on the code
+    then: the expected result is returned
+    """
+    assert result.get(code) == expected_result
