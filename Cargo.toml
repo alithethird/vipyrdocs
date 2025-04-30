@@ -14,3 +14,6 @@ lazy_static = "1.5.0"
 # "abi3-py39" tells pyo3 (and maturin) to build using the stable ABI with minimum Python version 3.9
 pyo3 = { version = "0.22.4", features = ["extension-module", "abi3-py39"] }
 regex = "1.11.1"
+rustpython-ast = { version = "0.4.0", features = ["visitor"] }
+rustpython-parser = "0.4.0"
+rstest = "0.25.0"

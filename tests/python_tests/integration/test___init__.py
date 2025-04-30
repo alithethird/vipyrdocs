@@ -9,21 +9,21 @@
 # import pytest
 
 # from ruff_docstrings_complete import (
-#     DOCSTR_MISSING_CODE,
+#     docstr_missing_code,
 #     FIXTURE_DECORATOR_PATTERN_ARG_NAME,
 #     FIXTURE_DECORATOR_PATTERN_DEFAULT,
 #     FIXTURE_FILENAME_PATTERN_ARG_NAME,
 #     FIXTURE_FILENAME_PATTERN_DEFAULT,
-#     MULT_RETURNS_SECTIONS_IN_DOCSTR_CODE,
-#     MULT_YIELDS_SECTIONS_IN_DOCSTR_CODE,
-#     RETURNS_SECTION_IN_DOCSTR_CODE,
-#     RETURNS_SECTION_NOT_IN_DOCSTR_CODE,
+#     mult_returns_sections_in_docstr_code,
+#     mult_yields_sections_in_docstr_code,
+#     returns_section_in_docstr_code,
+#     returns_section_not_in_docstr_code,
 #     TEST_FILENAME_PATTERN_ARG_NAME,
 #     TEST_FILENAME_PATTERN_DEFAULT,
 #     TEST_FUNCTION_PATTERN_ARG_NAME,
 #     TEST_FUNCTION_PATTERN_DEFAULT,
-#     YIELDS_SECTION_IN_DOCSTR_CODE,
-#     YIELDS_SECTION_NOT_IN_DOCSTR_CODE,
+#     yields_section_in_docstr_code,
+#     yields_section_not_in_docstr_code,
 # )
 # from ruff_docstrings_complete.args import (
 #     ARG_IN_DOCSTR_CODE,
@@ -160,12 +160,12 @@
 #         ),
 #         pytest.param(
 #             f"""
-# def foo():  # noqa: {DOCSTR_MISSING_CODE}
+# def foo():  # noqa: {docstr_missing_code}
 #     pass
 # """,
 #             "source.py",
 #             "",
-#             id=f"{DOCSTR_MISSING_CODE} disabled",
+#             id=f"{docstr_missing_code} disabled",
 #         ),
 #         pytest.param(
 #             f'''
@@ -266,11 +266,11 @@
 #             f'''
 # def foo():
 #     """Docstring."""
-#     return 1  # noqa: {RETURNS_SECTION_NOT_IN_DOCSTR_CODE}
+#     return 1  # noqa: {returns_section_not_in_docstr_code}
 # ''',
 #             "source.py",
 #             "",
-#             id=f"{RETURNS_SECTION_NOT_IN_DOCSTR_CODE} disabled",
+#             id=f"{returns_section_not_in_docstr_code} disabled",
 #         ),
 #         pytest.param(
 #             f'''
@@ -279,38 +279,38 @@
 
 #     Returns:
 #         A value.
-#     """  # noqa: {RETURNS_SECTION_IN_DOCSTR_CODE}
+#     """  # noqa: {returns_section_in_docstr_code}
 # ''',
 #             "source.py",
 #             "",
-#             id=f"{RETURNS_SECTION_IN_DOCSTR_CODE} disabled",
+#             id=f"{returns_section_in_docstr_code} disabled",
 #         ),
 #         pytest.param(
 #             f'''
 # def foo():
 #     """Docstring.
-
+# 
 #     Returns:
 #         A value.
-
+# 
 #     Return:
 #         A value.
-#     """  # noqa: {MULT_RETURNS_SECTIONS_IN_DOCSTR_CODE}
+#     """  # noqa: {mult_returns_sections_in_docstr_code}
 #     return 1
 # ''',
 #             "source.py",
 #             "",
-#             id=f"{MULT_RETURNS_SECTIONS_IN_DOCSTR_CODE} disabled",
+#             id=f"{mult_returns_sections_in_docstr_code} disabled",
 #         ),
 #         pytest.param(
 #             f'''
 # def foo():
 #     """Docstring."""
-#     yield 1  # noqa: {YIELDS_SECTION_NOT_IN_DOCSTR_CODE}
+#     yield 1  # noqa: {yields_section_not_in_docstr_code}
 # ''',
 #             "source.py",
 #             "",
-#             id=f"{YIELDS_SECTION_NOT_IN_DOCSTR_CODE} disabled",
+#             id=f"{yields_section_not_in_docstr_code} disabled",
 #         ),
 #         pytest.param(
 #             f'''
@@ -319,11 +319,11 @@
 
 #     Yields:
 #         A value.
-#     """  # noqa: {YIELDS_SECTION_IN_DOCSTR_CODE}
+#     """  # noqa: {yields_section_in_docstr_code}
 # ''',
 #             "source.py",
 #             "",
-#             id=f"{YIELDS_SECTION_IN_DOCSTR_CODE} disabled",
+#             id=f"{yields_section_in_docstr_code} disabled",
 #         ),
 #         pytest.param(
 #             f'''
@@ -335,12 +335,12 @@
 
 #     Yield:
 #         A value.
-#     """  # noqa: {MULT_YIELDS_SECTIONS_IN_DOCSTR_CODE}
+#     """  # noqa: {mult_yields_sections_in_docstr_code}
 #     yield 1
 # ''',
 #             "source.py",
 #             "",
-#             id=f"{MULT_YIELDS_SECTIONS_IN_DOCSTR_CODE} disabled",
+#             id=f"{mult_yields_sections_in_docstr_code} disabled",
 #         ),
 #         pytest.param(
 #             f'''

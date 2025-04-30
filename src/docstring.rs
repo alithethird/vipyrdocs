@@ -1,7 +1,4 @@
-use pyo3::{prelude::*, wrap_pymodule};
-use std::array::IntoIter;
-use std::env::args;
-use std::iter::Zip;
+use pyo3::{prelude::*};
 
 use regex::Regex;
 use std::collections::HashMap;
@@ -67,6 +64,7 @@ impl _Section {
 
 #[pyclass]
 #[derive(Debug, PartialEq)]
+#[derive(Clone)]
 pub struct Docstring {
     args: Option<Vec<String>>,
     args_sections: Option<Vec<String>>,
@@ -142,6 +140,24 @@ impl Docstring {
         self.raises_sections,
     )
     }
+
+    pub fn is_empty(&self) ->bool{
+        if self.args != None || self.args_sections != None || self.attrs != None || self.attrs_sections != None || self.returns_sections != None || self.yields_sections != None || self.raises != None || self.raises_sections != None{ return false;}
+        true
+    }
+    
+    pub fn has_returns(&self) -> bool{
+        if self.returns_sections.is_none(){
+            return false
+        }
+        if self.returns_sections.clone().unwrap().is_empty(){
+            return false
+        }
+        return true;
+    }
+    pub fn get_returns(&self) -> Vec<String>{
+        self.returns_sections.clone().unwrap()
+    }
 }
 
 #[pyfunction]
@@ -161,7 +177,7 @@ pub fn _get_sections(lines: Vec<String>) -> Vec<_Section> {
     let mut lines = cleaned_lines.into_iter().peekable();
 
 
-    while let Some(mut line) = lines.find(|l| !l.trim().is_empty()) {
+    while let Some(line) = lines.find(|l| !l.trim().is_empty()) {
         // Check if it's a section name
         let section_name = SECTION_NAME_PATTERN
             .captures(&line)
@@ -209,10 +225,10 @@ fn _get_section_by_name<'a>(name: &str, sections: &'a [_Section]) -> Option<&'a 
             .unwrap_or(false)
     })
 }
-fn _get_all_section_names_by_name<'a>(name: &str, sections: &'a [_Section]) -> Vec<String> {
+fn _get_all_section_names_by_name<'a>(name: &str, sections: &'a [_Section]) -> Option<Vec<String>> {
     let valid_names = &_SECTION_NAMES[name];
 
-    sections
+    let all_section_names: Vec<String> = sections
         .iter()
         .filter_map(|section| {
             section.name.as_ref().and_then(|n| {
@@ -224,7 +240,9 @@ fn _get_all_section_names_by_name<'a>(name: &str, sections: &'a [_Section]) -> V
                 }
             })
         })
-        .collect()
+        .collect();
+    if all_section_names.is_empty(){ return None;}
+    Some(all_section_names)
 }
 
 
@@ -238,13 +256,13 @@ pub fn parse(value: String) -> Docstring {
 
     return Docstring::new(
         args_section.map(|s| s.subs.clone()),
-        Some(_get_all_section_names_by_name("args", &sections)),
+        _get_all_section_names_by_name("args", &sections),
         attrs_section.map(|s| s.subs.clone()),
-        Some(_get_all_section_names_by_name("attrs", &sections)),
-        Some(_get_all_section_names_by_name("returns", &sections)),
-        Some(_get_all_section_names_by_name("yields", &sections)),
+        _get_all_section_names_by_name("attrs", &sections),
+        _get_all_section_names_by_name("returns", &sections),
+        _get_all_section_names_by_name("yields", &sections),
         raises_section.map(|s| s.subs.clone()),
-        Some(_get_all_section_names_by_name("raises", &sections)),
+        _get_all_section_names_by_name("raises", &sections),
     );
 }
 

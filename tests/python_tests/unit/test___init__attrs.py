@@ -7,7 +7,7 @@
 
 # import pytest
 
-# from ruff_docstrings_complete import DOCSTR_MISSING_MSG
+# from ruff_docstrings_complete import docstr_missing_msg
 # from ruff_docstrings_complete.attrs import (
 #     ATTR_IN_DOCSTR_MSG,
 #     ATTR_NOT_IN_DOCSTR_MSG,
@@ -28,7 +28,7 @@
 # class Class1:
 #     pass
 # """,
-#             (f"2:0 {DOCSTR_MISSING_MSG}",),
+#             (f"2:0 {docstr_missing_msg}",),
 #             id="class no docstring",
 #         ),
 #         pytest.param(
