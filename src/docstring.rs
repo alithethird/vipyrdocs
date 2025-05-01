@@ -161,6 +161,22 @@ impl Docstring {
         }
         self.returns_sections.clone().unwrap()
     }
+    
+    pub fn has_yields(&self) -> bool{
+        if self.yields_sections.is_none(){
+            return false
+        }
+        if self.yields_sections.clone().unwrap().is_empty(){
+            return false
+        }
+        return true;
+    }
+    pub fn get_yields(&self) -> Vec<String>{
+        if self.yields_sections.is_none(){
+            return Vec::<String>::new();
+        }
+        self.yields_sections.clone().unwrap()
+    }
 }
 
 #[pyfunction]

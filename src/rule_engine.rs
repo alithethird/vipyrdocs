@@ -1,17 +1,15 @@
-use crate::constants::{docstr_missing_msg, mult_returns_sections_in_docstr_msg, returns_section_in_docstr_msg, returns_section_not_in_docstr_msg, yields_section_not_in_docstr_msg};
+use crate::constants::{docstr_missing_msg, mult_returns_sections_in_docstr_msg, mult_yields_sections_in_docstr_msg, returns_section_in_docstr_msg, returns_section_not_in_docstr_msg, yields_section_in_docstr_msg, yields_section_not_in_docstr_msg};
 use crate::plugin::{get_result, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind};
 use pyo3::prelude::*;
 use rustpython_ast::text_size::TextRange;
-use rustpython_ast::{Expr, ExprAttribute, ExprCall, ExprYield, StmtReturn, TextSize};
+use rustpython_ast::{Expr, ExprAttribute, ExprCall, StmtReturn};
 use std::fs;
 
 use pyo3;
 
 fn read_file(file_name: &str) -> String {
     // Read the file and return the contents
-    let file_contents = fs::read_to_string(&file_name).unwrap_or_default();
-
-    return file_contents;
+    fs::read_to_string(&file_name).unwrap_or_default()
 }
 
 fn is_test_file(file_name: Option<&str>) -> bool {
@@ -36,7 +34,7 @@ pub fn lint_file(code: &str, file_name: Option<&str>) -> Vec<String> {
         code = read_file(file); // assuming this returns String
     }
 
-    return apply_rules(code.as_str(), file_name);
+    apply_rules(code.as_str(), file_name)
 }
 
 #[pyfunction]
@@ -60,14 +58,25 @@ pub fn apply_rules(code: &str, file_name: Option<&str>) -> Vec<String> {
 
     // DC032: a docstring should only contain a single returns
     // section, found %s
-    output.extend(check_for_multiple_returns_section(&code, &things, test_file));
+    output.extend(check_for_multiple_returns_section(
+        &code, &things, test_file,
+    ));
 
     // DC040: function/ method that yields a value should have the
     // yields section in the docstring
     output.extend(check_for_missing_yields_section(&code, &things, test_file));
-    
 
-    return output;
+    // DC041: function/ method that does not yield a value should not
+    // have the yields section in the docstring
+    output.extend(check_for_extra_yields_section(&code, &things, test_file));
+
+
+    // DC042: a docstring should only contain a single yields
+    // section, found %s
+    output.extend(check_for_multiple_yields_section(
+        &code, &things, test_file,
+    ));
+    output
 }
 
 /// Finds the (line, column) of `target_string` if it exists within the specified TextRange of `s`.
@@ -127,6 +136,29 @@ fn format_problem(line: usize, line_location: usize, error_msg: String) -> Strin
     format!("{}:{} {}", line, line_location, error_msg)
 }
 
+fn check_for_multiple_yields_section(
+    file_contents: &str,
+    things: &DocstringCollector,
+    is_test_file: bool,
+) -> Vec<String> {
+    // DCO032: function/ method that returns a value does not have the returns section in the docstring.
+    let mut problem_functions: Vec<String> = Vec::new();
+
+    problem_functions.extend(check_functions_for_multiple_yields_section(
+        &things.function_infos,
+        file_contents,
+        is_test_file,
+    ));
+    for class_infos in &things.class_infos {
+        problem_functions.extend(check_functions_for_multiple_yields_section(
+            &class_infos.funcs,
+            file_contents,
+            is_test_file,
+        ));
+    }
+
+    problem_functions
+}
 
 fn check_for_multiple_returns_section(
     file_contents: &str,
@@ -200,6 +232,30 @@ fn check_for_missing_yields_section(
     problem_functions
 }
 
+fn check_for_extra_yields_section(
+    file_contents: &str,
+    things: &DocstringCollector,
+    is_test_file: bool,
+) -> Vec<String> {
+    // DCO031: function/ method that returns a value does not have the returns section in the docstring.
+    let mut problem_functions: Vec<String> = Vec::new();
+
+    problem_functions.extend(check_functions_for_extra_yields_section(
+        &things.function_infos,
+        file_contents,
+        is_test_file,
+    ));
+    for class_infos in &things.class_infos {
+        problem_functions.extend(check_functions_for_extra_yields_section(
+            &class_infos.funcs,
+            file_contents,
+            is_test_file,
+        ));
+    }
+
+    problem_functions
+}
+
 fn check_for_missing_returns_section(
     file_contents: &str,
     things: &DocstringCollector,
@@ -224,6 +280,58 @@ fn check_for_missing_returns_section(
     problem_functions
 }
 
+fn check_functions_for_multiple_yields_section(
+    function_infos: &Vec<FunctionInfo>,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut problem_functions: Vec<String> = Vec::new();
+
+    for function in function_infos {
+        // ignore overloads
+        // Skip function if *any* decorator is an overload
+        if is_overload(&function) {
+            continue;
+        }
+        let func_name = function.def.name().to_string();
+        if func_name.starts_with("test_") && is_test_file {
+            continue;
+        }
+        if is_fixture(function.def.clone()) && is_test_file {
+            continue;
+        }
+
+        // ignore if function doesn't have docstrings
+        if function.docstring.is_none() {
+            continue;
+        }
+
+        if function.docstring.clone().unwrap().get_yields().len() > 1 {
+            let mut _range = function.def.range();
+            let yield_lines = find_string_in_text_range(
+                file_contents,
+                _range.clone(),
+                vec!["Yield:", "Yields:"],
+            );
+            if yield_lines.len() < 2 {
+                continue;
+            }
+            let mut founds: Vec<String> = Vec::new();
+            for (_, _, found) in &yield_lines {
+                // the latest char is a : which we do not want
+                founds.push(found[..found.len() - 1].to_string());
+            }
+            let (line, line_location, _) = yield_lines.first().unwrap().to_owned();
+            problem_functions.push(format_problem(
+                line,
+                line_location,
+                mult_yields_sections_in_docstr_msg(founds.join(",").to_string()),
+            ));
+        }
+    }
+
+    problem_functions
+}
 fn check_functions_for_multiple_returns_section(
     function_infos: &Vec<FunctionInfo>,
     file_contents: &str,
@@ -249,12 +357,14 @@ fn check_functions_for_multiple_returns_section(
         if function.docstring.is_none() {
             continue;
         }
-        
-        if function.docstring.clone().unwrap().get_returns().len() > 1 {
 
+        if function.docstring.clone().unwrap().get_returns().len() > 1 {
             let mut _range = function.def.range();
-            let return_lines =
-                find_string_in_text_range(file_contents, _range.clone(), vec!["Return:","Returns:"]);
+            let return_lines = find_string_in_text_range(
+                file_contents,
+                _range.clone(),
+                vec!["Return:", "Returns:"],
+            );
             if return_lines.len() < 2 {
                 continue;
             }
@@ -263,13 +373,65 @@ fn check_functions_for_multiple_returns_section(
                 // the latest char is a : which we do not want
                 founds.push(found[..found.len() - 1].to_string());
             }
-            let (line, line_location, found) = return_lines.first().unwrap().to_owned();
-                problem_functions.push(format_problem(
-                    line,
-                    line_location,
-                    mult_returns_sections_in_docstr_msg(founds.join(",").to_string())
-                ));
+            let (line, line_location, _) = return_lines.first().unwrap().to_owned();
+            problem_functions.push(format_problem(
+                line,
+                line_location,
+                mult_returns_sections_in_docstr_msg(founds.join(",").to_string()),
+            ));
+        }
+    }
 
+    problem_functions
+}
+
+fn check_functions_for_extra_yields_section(
+    function_infos: &Vec<FunctionInfo>,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut problem_functions: Vec<String> = Vec::new();
+
+    for function in function_infos {
+        // ignore overloads
+        // Skip function if *any* decorator is an overload
+        if is_overload(&function) {
+            continue;
+        }
+        let func_name = function.def.name().to_string();
+        if func_name.starts_with("test_") && is_test_file {
+            continue;
+        }
+        if is_fixture(function.def.clone()) && is_test_file {
+            continue;
+        }
+
+        // ignore if function doesn't have docstrings
+        if function.docstring.is_none() {
+            continue;
+        }
+
+        let yield_statements: &Vec<YieldKind> = &function.yields;
+
+        if (yield_statements.len() == 1
+            && is_yield_empty(&file_contents, yield_statements.first().unwrap()))
+            || yield_statements.is_empty()
+        {
+            if function.docstring.clone().unwrap().has_yields() {
+                let mut _range = function.def.range();
+                let yield_lines =
+                    find_string_in_text_range(file_contents, _range.clone(), vec!["Yields:"]);
+                if yield_lines.is_empty() {
+                    continue;
+                }
+                for (line, line_location, _) in yield_lines {
+                    problem_functions.push(format_problem(
+                        line,
+                        line_location,
+                        yields_section_in_docstr_msg(),
+                    ));
+                }
+            }
         }
     }
 
@@ -313,14 +475,14 @@ fn check_functions_for_extra_returns_section(
                 if return_lines.is_empty() {
                     continue;
                 }
-                for (line, line_location, target) in return_lines
-                {
+                for (line, line_location, _) in return_lines {
                     problem_functions.push(format_problem(
                         line,
                         line_location,
                         returns_section_in_docstr_msg(),
                     ));
-                }            }
+                }
+            }
         }
     }
 
@@ -360,30 +522,36 @@ fn check_functions_for_missing_yields_section(
             continue;
         }
 
-        if !function.docstring.clone().unwrap().has_returns() {
+        if !function.docstring.clone().unwrap().has_yields() {
             for _yield in yield_statements {
-                    let _range = &_yield.range();
-
-                let start = usize::try_from(_range.start().to_u32()).unwrap();
-                let end = usize::try_from(_range.end().to_u32()).unwrap();
-
-                let sub = &file_contents[start..end];
-                // if doesn't yield any value    
-                if sub == "yield"{
-                        continue;
-                    }
-                    let (line, line_location) =
-                        find_line_and_column(file_contents, _range.start().to_usize()).unwrap();
-                    problem_functions.push(format_problem(
-                        line,
-                        line_location,
-                        yields_section_not_in_docstr_msg(),
-                    ));
+                let _range = &_yield.range();
+                if is_yield_empty(&file_contents, _yield){continue}
+                let (line, line_location) =
+                    find_line_and_column(file_contents, _range.start().to_usize()).unwrap();
+                problem_functions.push(format_problem(
+                    line,
+                    line_location,
+                    yields_section_not_in_docstr_msg(),
+                ));
             }
         }
     }
 
     problem_functions
+}
+
+fn is_yield_empty(file_contents: &&str, yield_kind: &YieldKind) -> bool {
+    let _range: &TextRange = yield_kind.range();
+
+    let start = usize::try_from(_range.start().to_u32()).unwrap();
+    let end = usize::try_from(_range.end().to_u32()).unwrap();
+
+    let sub = &file_contents[start..end];
+    // if it doesn't yield any value
+    if sub == "yield" {
+        return true;
+    }
+    false
 }
 
 fn check_functions_for_missing_returns_section(
@@ -569,7 +737,7 @@ fn is_fixture(function: FunctionDefKind) -> bool {
         }
     }
 
-    return is_fixture;
+    is_fixture
 }
 
 fn is_name_fixture_decorator(decorator: &Expr) -> bool {

@@ -79,10 +79,11 @@ pub fn yields_section_in_docstr_msg() -> String {
 pub fn mult_yields_sections_in_docstr_code() -> String {
     format!("{}042", ERROR_CODE_PREFIX)
 }
-pub fn mult_yields_sections_in_docstr_msg() -> String {
+pub fn mult_yields_sections_in_docstr_msg(found: String) -> String {
     format!(
-        "{} a docstring should only contain a single yields section, found %s{}{}",
+        "{} a docstring should only contain a single yields section, found {}{}{}",
         mult_yields_sections_in_docstr_code(),
+        found.to_string(),
         MORE_INFO_BASE,
         mult_yields_sections_in_docstr_code().to_lowercase()
     )
