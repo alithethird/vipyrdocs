@@ -1,6 +1,8 @@
+mod test_rule_40;
+
 use rstest::rstest;
 use crate::rule_engine::lint_file;
-use crate::constants::{returns_section_in_docstr_msg, returns_section_not_in_docstr_msg};
+use crate::constants::{returns_section_in_docstr_msg, returns_section_not_in_docstr_msg, yields_section_not_in_docstr_msg};
 
 #[test]
 pub fn test_lint_file() {
@@ -248,6 +250,9 @@ fn test_rule_31(#[case] code: &str, #[case] expected: Vec<String>) {
     }
 }
 
+
+
+
 #[test]
 fn test_rule_31_function_return_no_value_returns_in_docstring()
 {
@@ -386,15 +391,21 @@ def function_1():
 }
 
 
+
+
+
+
+
+
 // #[test]
 // #[rstest]
 // #[case::function_return_multiple_returns_in_docstring(
 //     r#"
 // def function_1():
 //     """Docstring.
-// 
+//
 //     Returns:
-// 
+//
 //     Returns:
 //     """
 //     return 1
@@ -407,9 +418,9 @@ def function_1():
 //     """Docstring."""
 //     def function_1():
 //         """Docstring.
-// 
+//
 //         Returns:
-// 
+//
 //         Returns:
 //         """
 //         return 1
@@ -431,4 +442,4 @@ def function_1():
 //         );
 //     }
 // }
-// 
+//

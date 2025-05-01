@@ -1,6 +1,6 @@
 use crate::docstring;
 use rustpython_ast::text_size::{ TextRange};
-use rustpython_ast::{Stmt, StmtAsyncFunctionDef, StmtClassDef, StmtFunctionDef, StmtReturn, TextSize, Visitor};
+use rustpython_ast::{ExprYield, ExprYieldFrom, Stmt, StmtAsyncFunctionDef, StmtClassDef, StmtFunctionDef, StmtReturn, TextSize, Visitor};
 use rustpython_parser::{
     parse, Mode,
 };
@@ -26,6 +26,35 @@ pub fn get_result(code: &str, filename: Option<&str>) -> DocstringCollector {
 pub struct DocstringCollector {
     pub function_infos: Vec<FunctionInfo>,
     pub class_infos: Vec<ClassInfo>,
+}
+
+
+#[derive(PartialEq, Clone)]
+pub enum YieldKind {
+    Yield(ExprYield),
+    YieldFrom(ExprYieldFrom),
+}
+
+
+impl YieldKind {
+    // pub fn name(&self) -> &str {
+    //     match self {
+    //         FunctionDefKind::Sync(def) => &def.name,
+    //         FunctionDefKind::Async(def) => &def.name,
+    //     }
+    // }
+    // pub fn body(&self) -> &Vec<Stmt> {
+    //     match self {
+    //         FunctionDefKind::Sync(def) => &def.body,
+    //         FunctionDefKind::Async(def) => &def.body,
+    //     }
+    // }
+    pub fn range(&self) -> &TextRange {
+        match self {
+            YieldKind::Yield(def) => &def.range,
+            YieldKind::YieldFrom(def) => &def.range,
+        }
+    }
 }
 
 
@@ -67,6 +96,7 @@ impl FunctionDefKind {
 pub struct FunctionInfo {
     pub def: FunctionDefKind,
     pub returns: Vec<StmtReturn>,
+    pub yields: Vec<YieldKind>,
     pub docstring: Option<Docstring>,
 }
 // 
@@ -113,14 +143,31 @@ fn get_func(expr: &FunctionDefKind) -> FunctionInfo {
 
     // Walk the function body to collect all return statements
     let mut return_collector = ReturnCollector { returns: Vec::new() };
+    
+    let mut yield_collector = YieldCollector{ yields: Vec::new() };
     for stmt in expr.body() {
         return_collector.visit_stmt(stmt.clone());
+        yield_collector.visit_stmt(stmt.clone());
     }
 
     FunctionInfo {
         def: expr.clone(),
         returns: return_collector.returns,
+        yields: yield_collector.yields,
         docstring: function_docs,
+    }
+}
+struct YieldCollector {
+    pub yields: Vec<YieldKind>,
+}
+
+impl Visitor for YieldCollector {
+    fn visit_expr_yield(&mut self, node: ExprYield<TextRange>) {
+        self.yields.push(YieldKind::Yield(node));
+    }
+
+    fn generic_visit_expr_yield_from(&mut self, node: ExprYieldFrom<TextRange>) {
+        self.yields.push(YieldKind::YieldFrom(node));
     }
 }
 struct ReturnCollector {

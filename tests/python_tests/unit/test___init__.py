@@ -296,147 +296,147 @@ def function_1():
             (f"5:4 {RETURNS_SECTION_NOT_IN_DOCSTR_MSG}",),
             id="function multiple return second value returns not in docstring",
         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     yield 1
-# ''',
-#             (f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="function single yield value yields not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def _function_1():
-#     """Docstring."""
-#     yield 1
-# ''',
-#             (),
-#             id="private function single yield value yields not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     yield from tuple()
-# ''',
-#             (f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="function single yield from value yields not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     yield 0
-# ''',
-#             (f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="function single falsely yield value yields not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     yield None
-# ''',
-#             (f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="function single None yield value yields not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# async def function_1():
-#     """Docstring."""
-#     yield 1
-# ''',
-#             (f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="async function single yield value yields not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# class FooClass:
-#     """Docstring."""
-#     def function_1(self):
-#         """Docstring."""
-#         yield 1
-# ''',
-#             (f"6:8 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="method single yield value yields not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     if True:
-#         yield 1
-# ''',
-#             (f"5:8 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="function single nested yield value yields not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     yield 11
-#     yield 12
-# ''',
-#             (
-#                 f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",
-#                 f"5:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",
-#             ),
-#             id="function multiple yield value yields not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     yield 11
-#     yield
-# ''',
-#             (f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="function multiple yield first value yields not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     yield
-#     yield 12
-# ''',
-#             (f"5:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="function multiple yield second value yields not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     yield from tuple()
-#     yield from list()
-# ''',
-#             (
-#                 f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",
-#                 f"5:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",
-#             ),
-#             id="function multiple yield from value yields not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     yield from tuple()
-#     yield
-# ''',
-#             (f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="function multiple yield from first value yields not in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring."""
-#     yield
-#     yield from list()
-# ''',
-#             (f"5:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="function multiple yield from second value yields not in docstring",
-#         ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    yield 1
+''',
+            (f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="function single yield value yields not in docstring",
+        ),
+        pytest.param(
+            '''
+def _function_1():
+    """Docstring."""
+    yield 1
+''',
+            (),
+            id="private function single yield value yields not in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    yield from tuple()
+''',
+            (f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="function single yield from value yields not in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    yield 0
+''',
+            (f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="function single falsely yield value yields not in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    yield None
+''',
+            (f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="function single None yield value yields not in docstring",
+        ),
+        pytest.param(
+            '''
+async def function_1():
+    """Docstring."""
+    yield 1
+''',
+            (f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="async function single yield value yields not in docstring",
+        ),
+        pytest.param(
+            '''
+class FooClass:
+    """Docstring."""
+    def function_1(self):
+        """Docstring."""
+        yield 1
+''',
+            (f"6:8 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="method single yield value yields not in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    if True:
+        yield 1
+''',
+            (f"5:8 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="function single nested yield value yields not in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    yield 11
+    yield 12
+''',
+            (
+                f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",
+                f"5:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",
+            ),
+            id="function multiple yield value yields not in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    yield 11
+    yield
+''',
+            (f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="function multiple yield first value yields not in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    yield
+    yield 12
+''',
+            (f"5:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="function multiple yield second value yields not in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    yield from tuple()
+    yield from list()
+''',
+            (
+                f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",
+                f"5:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",
+            ),
+            id="function multiple yield from value yields not in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    yield from tuple()
+    yield
+''',
+            (f"4:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="function multiple yield from first value yields not in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring."""
+    yield
+    yield from list()
+''',
+            (f"5:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="function multiple yield from second value yields not in docstring",
+        ),
 #         pytest.param(
 #             '''
 # def function_1():
