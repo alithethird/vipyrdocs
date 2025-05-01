@@ -1,8 +1,8 @@
-use crate::constants::{docstr_missing_msg, mult_returns_sections_in_docstr_msg, returns_section_in_docstr_msg, returns_section_not_in_docstr_msg};
-use crate::plugin::{get_result, DocstringCollector, FunctionDefKind, FunctionInfo};
+use crate::constants::{docstr_missing_msg, mult_returns_sections_in_docstr_msg, returns_section_in_docstr_msg, returns_section_not_in_docstr_msg, yields_section_not_in_docstr_msg};
+use crate::plugin::{get_result, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind};
 use pyo3::prelude::*;
 use rustpython_ast::text_size::TextRange;
-use rustpython_ast::{Expr, ExprAttribute, ExprCall, StmtReturn};
+use rustpython_ast::{Expr, ExprAttribute, ExprCall, ExprYield, StmtReturn, TextSize};
 use std::fs;
 
 use pyo3;
@@ -62,7 +62,10 @@ pub fn apply_rules(code: &str, file_name: Option<&str>) -> Vec<String> {
     // section, found %s
     output.extend(check_for_multiple_returns_section(&code, &things, test_file));
 
-    println!("Missing Docstring!\n{:?}", output);
+    // DC040: function/ method that yields a value should have the
+    // yields section in the docstring
+    output.extend(check_for_missing_yields_section(&code, &things, test_file));
+    
 
     return output;
 }
@@ -172,6 +175,31 @@ fn check_for_extra_returns_section(
 
     problem_functions
 }
+
+fn check_for_missing_yields_section(
+    file_contents: &str,
+    things: &DocstringCollector,
+    is_test_file: bool,
+) -> Vec<String> {
+    // DCO040
+    let mut problem_functions: Vec<String> = Vec::new();
+
+    problem_functions.extend(check_functions_for_missing_yields_section(
+        &things.function_infos,
+        file_contents,
+        is_test_file,
+    ));
+    for class_infos in &things.class_infos {
+        problem_functions.extend(check_functions_for_missing_yields_section(
+            &class_infos.funcs,
+            file_contents,
+            is_test_file,
+        ));
+    }
+
+    problem_functions
+}
+
 fn check_for_missing_returns_section(
     file_contents: &str,
     things: &DocstringCollector,
@@ -298,6 +326,66 @@ fn check_functions_for_extra_returns_section(
 
     problem_functions
 }
+
+fn check_functions_for_missing_yields_section(
+    function_infos: &Vec<FunctionInfo>,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut problem_functions: Vec<String> = Vec::new();
+
+    for function in function_infos {
+        // ignore overloads
+        // Skip function if *any* decorator is an overload
+        if is_overload(&function) {
+            continue;
+        }
+        let func_name = function.def.name().to_string();
+        if func_name.starts_with("test_") && is_test_file {
+            continue;
+        }
+        if is_fixture(function.def.clone()) && is_test_file {
+            continue;
+        }
+        if func_name.starts_with("_") {
+            continue;
+        }
+        // ignore if function doesn't have yields
+        let yield_statements: &Vec<YieldKind> = &function.yields;
+        if yield_statements.is_empty() {
+            continue;
+        }
+
+        if function.docstring.is_none() {
+            continue;
+        }
+
+        if !function.docstring.clone().unwrap().has_returns() {
+            for _yield in yield_statements {
+                    let _range = &_yield.range();
+
+                let start = usize::try_from(_range.start().to_u32()).unwrap();
+                let end = usize::try_from(_range.end().to_u32()).unwrap();
+
+                let sub = &file_contents[start..end];
+                // if doesn't yield any value    
+                if sub == "yield"{
+                        continue;
+                    }
+                    let (line, line_location) =
+                        find_line_and_column(file_contents, _range.start().to_usize()).unwrap();
+                    problem_functions.push(format_problem(
+                        line,
+                        line_location,
+                        yields_section_not_in_docstr_msg(),
+                    ));
+            }
+        }
+    }
+
+    problem_functions
+}
+
 fn check_functions_for_missing_returns_section(
     function_infos: &Vec<FunctionInfo>,
     file_contents: &str,
