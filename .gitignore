@@ -6,5 +6,8 @@ dist/
 wheels/
 *.egg-info
 
+# Rust
+target/
+
 # Virtual environments
 .venv

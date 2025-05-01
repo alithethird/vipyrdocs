@@ -156,6 +156,9 @@ impl Docstring {
         return true;
     }
     pub fn get_returns(&self) -> Vec<String>{
+        if self.returns_sections.is_none(){
+            return Vec::<String>::new();
+        }
         self.returns_sections.clone().unwrap()
     }
 }
