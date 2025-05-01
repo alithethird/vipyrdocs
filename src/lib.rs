@@ -49,7 +49,7 @@ fn _core(py: Python<'_>,m: &Bound<'_, PyModule>) -> PyResult<()> {
     let _ = constants.add("returns_section_in_docstr_code", constants::returns_section_in_docstr_code());
     let _ = constants.add("returns_section_in_docstr_msg", constants::returns_section_in_docstr_msg());
     let _ = constants.add("mult_returns_sections_in_docstr_code", constants::mult_returns_sections_in_docstr_code());
-    let _ = constants.add("mult_returns_sections_in_docstr_msg", constants::mult_returns_sections_in_docstr_msg());
+    // let _ = constants.add("mult_returns_sections_in_docstr_msg", constants::mult_returns_sections_in_docstr_msg());
     let _ = constants.add("yields_section_not_in_docstr_code", constants::yields_section_not_in_docstr_code());
     let _ = constants.add("yields_section_not_in_docstr_msg", constants::yields_section_not_in_docstr_msg());
     let _ = constants.add("yields_section_in_docstr_code", constants::yields_section_in_docstr_code());

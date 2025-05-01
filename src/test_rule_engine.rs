@@ -1,17 +1,6 @@
 use rstest::rstest;
 use crate::rule_engine::lint_file;
-use crate::constants::{docstr_missing_msg, returns_section_in_docstr_msg, returns_section_not_in_docstr_msg};
-
-#[test]
-pub fn test_lint_file_with_file() {
-    let file_name = "/home/aliu/dev/ruff-docstrings-complete/flake8-docstrings-complete-main/flake8_docstrings_complete/attrs.py";
-    let file_name =
-        "/home/aliu/dev/ruff-docstrings-complete/tests/sample_files/no_function_docstring.py";
-    let output = lint_file("", Some(file_name));
-
-    // assert!(output.contains("Missing Docstring"));
-    // assert!(output.contains("no_function_docstring.py"));
-}
+use crate::constants::{returns_section_in_docstr_msg, returns_section_not_in_docstr_msg};
 
 #[test]
 pub fn test_lint_file() {
@@ -106,7 +95,7 @@ def function_1():
     """Docstring."""
     return 1
 "#,
-    vec![format!("4:4 {}", returns_section_in_docstr_msg())]
+    vec![format!("4:4 {}", returns_section_not_in_docstr_msg())]
 )]
 #[case::function_single_falsely_return_value_returns_not_in_docstring(
     r#"
@@ -114,7 +103,7 @@ def function_1():
     """Docstring."""
     return 0
 "#,
-    vec![format!("4:4 {}", returns_section_in_docstr_msg())]
+    vec![format!("4:4 {}", returns_section_not_in_docstr_msg())]
 )]
 #[case::function_single_none_return_value_returns_not_in_docstring(
     r#"
@@ -122,7 +111,7 @@ def function_1():
     """Docstring."""
     return None
 "#,
-    vec![format!("4:4 {}", returns_section_in_docstr_msg())]
+    vec![format!("4:4 {}", returns_section_not_in_docstr_msg())]
 )]
 #[case::async_function_single_return_value_returns_not_in_docstring(
     r#"
@@ -130,7 +119,7 @@ async def function_1():
     """Docstring."""
     return 1
 "#,
-    vec![format!("4:4 {}", returns_section_in_docstr_msg())]
+    vec![format!("4:4 {}", returns_section_not_in_docstr_msg())]
 )]
 #[case::method_single_return_value_returns_not_in_docstring(
     r#"
@@ -140,7 +129,7 @@ class FooClass:
         """Docstring."""
         return 1
 "#,
-    vec![format!("6:8 {}", returns_section_in_docstr_msg())]
+    vec![format!("6:8 {}", returns_section_not_in_docstr_msg())]
 )]
 #[case::function_single_nested_return_value_returns_not_in_docstring(
     r#"
@@ -149,7 +138,7 @@ def function_1():
     if True:
         return 1
 "#,
-    vec![format!("5:8 {}", returns_section_in_docstr_msg())]
+    vec![format!("5:8 {}", returns_section_not_in_docstr_msg())]
 )]
 #[case::function_multiple_return_value_returns_not_in_docstring(
     r#"
@@ -159,8 +148,8 @@ def function_1():
     return 12
 "#,
     vec![
-        format!("4:4 {}", returns_section_in_docstr_msg()),
-        format!("5:4 {}", returns_section_in_docstr_msg())
+        format!("4:4 {}", returns_section_not_in_docstr_msg()),
+        format!("5:4 {}", returns_section_not_in_docstr_msg())
     ]
 )]
 #[case::function_multiple_return_first_value_returns_not_in_docstring(
@@ -170,7 +159,7 @@ def function_1():
     return 11
     return
 "#,
-    vec![format!("4:4 {}", returns_section_in_docstr_msg())]
+    vec![format!("4:4 {}", returns_section_not_in_docstr_msg())]
 )]
 #[case::function_multiple_return_second_value_returns_not_in_docstring(
     r#"
@@ -179,7 +168,7 @@ def function_1():
     return
     return 12
 "#,
-    vec![format!("5:4 {}", returns_section_in_docstr_msg())]
+    vec![format!("5:4 {}", returns_section_not_in_docstr_msg())]
 )]
 fn test_rule_30(#[case] code: &str, #[case] expected: Vec<String>) {
     let output = lint_file(code, None);
@@ -196,6 +185,98 @@ fn test_rule_30(#[case] code: &str, #[case] expected: Vec<String>) {
         );
     }
 }
+
+
+#[rstest]
+#[test]
+#[case::function_no_return_returns_in_docstring(
+    r#"
+def function_1():
+    """Docstring.
+
+    Returns:
+    """
+"#,
+    vec![format!("3:4 {}", returns_section_in_docstr_msg())]
+)]
+#[case::private_function_no_return_returns_in_docstring(
+    r#"
+def _function_1():
+    """Docstring.
+
+    Returns:
+    """
+"#,
+    vec![format!("3:4 {}", returns_section_in_docstr_msg())]
+)]
+#[case::method_no_return_returns_in_docstring(
+    r#"
+class Class1:
+    """Docstring."""
+    def function_1():
+        """Docstring.
+
+        Returns:
+        """
+"#,
+    vec![format!("5:8 {}", returns_section_in_docstr_msg())]
+)]
+#[case::function_return_no_value_returns_in_docstring(
+    r#"
+def function_1():
+    """Docstring.
+
+    Returns:
+    """
+    return
+"#,
+    vec![format!("3:4 {}", returns_section_in_docstr_msg())]
+)]
+fn test_rule_31(#[case] code: &str, #[case] expected: Vec<String>) {
+    let output = lint_file(code, None);
+    println!("{:#?}", output);
+    assert_eq!(output.len(), expected.len());
+    for (index, exp) in expected.iter().enumerate() {
+        assert_eq!(
+            &output[index],
+            exp,
+            "Mismatch at output index {}: got `{}`, expected `{}`",
+            index,
+            output[index],
+            exp
+        );
+    }
+}
+
+#[test]
+fn test_rule_31_function_return_no_value_returns_in_docstring()
+{
+    let code: &str = r#"
+def function_1():
+    """Docstring.
+
+    Returns:
+    """
+    return
+"#;
+    let expected: Vec<String> = vec![format!("3:4 {}", returns_section_in_docstr_msg())];
+    let output = lint_file(code, None);
+    println!("{:#?}", output);
+    assert_eq!(output.len(), expected.len());
+    for (index, exp) in expected.iter().enumerate() {
+        assert_eq!(
+            &output[index],
+            exp,
+            "Mismatch at output index {}: got `{}`, expected `{}`",
+            index,
+            output[index],
+            exp
+        );
+    }
+}
+
+
+
 
 #[test]
 fn test_rule_30_async_function_single_return_value_returns_not_in_docstring()
@@ -303,3 +384,51 @@ def function_1():
         );
     }
 }
+
+
+// #[test]
+// #[rstest]
+// #[case::function_return_multiple_returns_in_docstring(
+//     r#"
+// def function_1():
+//     """Docstring.
+// 
+//     Returns:
+// 
+//     Returns:
+//     """
+//     return 1
+// "#,
+//     vec![format!("3:4 {}", mult_returns_section_in_docstr_msg("Returns,Returns"))]
+// )]
+// #[case::function_return_no_value_returns_in_docstring(
+//     r#"
+// class Class1:
+//     """Docstring."""
+//     def function_1():
+//         """Docstring.
+// 
+//         Returns:
+// 
+//         Returns:
+//         """
+//         return 1
+// "#,
+//     vec![format!("5:8 {}", mult_returns_section_in_docstr_msg("Returns,Returns"))]
+// )]
+// fn test_rule_32(#[case] code: &str, #[case] expected: Vec<String>) {
+//     let output = lint_file(code, None);
+//     println!("{:#?}", output);
+//     assert_eq!(output.len(), expected.len());
+//     for (index, exp) in expected.iter().enumerate() {
+//         assert_eq!(
+//             &output[index],
+//             exp,
+//             "Mismatch at output index {}: got `{}`, expected `{}`",
+//             index,
+//             output[index],
+//             exp
+//         );
+//     }
+// }
+// 

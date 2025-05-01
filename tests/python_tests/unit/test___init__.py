@@ -129,83 +129,83 @@ def function_1():
             (f"2:0 {DOCSTR_MISSING_MSG}",),
             id="function docstring missing expression constnant not string",
         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring.
-# 
-#     Returns:
-#     """
-# ''',
-#             (f"3:4 {RETURNS_SECTION_IN_DOCSTR_MSG}",),
-#             id="function no return returns in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def _function_1():
-#     """Docstring.
+        pytest.param(
+            '''
+def function_1():
+    """Docstring.
 
-#     Returns:
-#     """
-# ''',
-#             (f"3:4 {RETURNS_SECTION_IN_DOCSTR_MSG}",),
-#             id="private function no return returns in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# class Class1:
-#     """Docstring."""
-#     def function_1():
-#         """Docstring.
+    Returns:
+    """
+''',
+            (f"3:4 {RETURNS_SECTION_IN_DOCSTR_MSG}",),
+            id="function no return returns in docstring",
+        ),
+        pytest.param(
+            '''
+def _function_1():
+    """Docstring.
 
-#         Returns:
-#         """
-# ''',
-#             (f"5:8 {RETURNS_SECTION_IN_DOCSTR_MSG}",),
-#             id="method no return returns in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring.
+    Returns:
+    """
+''',
+            (f"3:4 {RETURNS_SECTION_IN_DOCSTR_MSG}",),
+            id="private function no return returns in docstring",
+        ),
+        pytest.param(
+            '''
+class Class1:
+    """Docstring."""
+    def function_1():
+        """Docstring.
 
-#     Returns:
-#     """
-#     return
-# ''',
-#             (f"3:4 {RETURNS_SECTION_IN_DOCSTR_MSG}",),
-#             id="function return no value returns in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring.
+        Returns:
+        """
+''',
+            (f"5:8 {RETURNS_SECTION_IN_DOCSTR_MSG}",),
+            id="method no return returns in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring.
 
-#     Returns:
+    Returns:
+    """
+    return
+''',
+            (f"3:4 {RETURNS_SECTION_IN_DOCSTR_MSG}",),
+            id="function return no value returns in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring.
 
-#     Returns:
-#     """
-#     return 1
-# ''',
-#             (f"3:4 {MULT_RETURNS_SECTIONS_IN_DOCSTR_MSG % 'Returns,Returns'}",),
-#             id="function return multiple returns in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# class Class1:
-#     """Docstring."""
-#     def function_1():
-#         """Docstring.
+    Returns:
 
-#         Returns:
+    Returns:
+    """
+    return 1
+''',
+            (f"3:4 {MULT_RETURNS_SECTIONS_IN_DOCSTR_MSG % 'Returns,Returns'}",),
+            id="function return multiple returns in docstring",
+        ),
+        pytest.param(
+            '''
+class Class1:
+    """Docstring."""
+    def function_1():
+        """Docstring.
 
-#         Returns:
-#         """
-#         return 1
-# ''',
-#             (f"5:8 {MULT_RETURNS_SECTIONS_IN_DOCSTR_MSG % 'Returns,Returns'}",),
-#             id="method return multiple returns in docstring",
-#         ),
+        Returns:
+
+        Returns:
+        """
+        return 1
+''',
+            (f"5:8 {MULT_RETURNS_SECTIONS_IN_DOCSTR_MSG % 'Returns,Returns'}",),
+            id="method return multiple returns in docstring",
+        ),
         pytest.param(
             '''
 def function_1():
