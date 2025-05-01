@@ -437,97 +437,97 @@ def function_1():
             (f"5:4 {YIELDS_SECTION_NOT_IN_DOCSTR_MSG}",),
             id="function multiple yield from second value yields not in docstring",
         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring.
+        pytest.param(
+            '''
+def function_1():
+    """Docstring.
 
-#     Yields:
-#     """
-# ''',
-#             (f"3:4 {YIELDS_SECTION_IN_DOCSTR_MSG}",),
-#             id="function no yield yields in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def _function_1():
-#     """Docstring.
+    Yields:
+    """
+''',
+            (f"3:4 {YIELDS_SECTION_IN_DOCSTR_MSG}",),
+            id="function no yield yields in docstring",
+        ),
+        pytest.param(
+            '''
+def _function_1():
+    """Docstring.
 
-#     Yields:
-#     """
-# ''',
-#             (f"3:4 {YIELDS_SECTION_IN_DOCSTR_MSG}",),
-#             id="private function no yield yields in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# class Class1:
-#     """Docstring."""
-#     def function_1():
-#         """Docstring.
+    Yields:
+    """
+''',
+            (f"3:4 {YIELDS_SECTION_IN_DOCSTR_MSG}",),
+            id="private function no yield yields in docstring",
+        ),
+        pytest.param(
+            '''
+class Class1:
+    """Docstring."""
+    def function_1():
+        """Docstring.
 
-#         Yields:
-#         """
-# ''',
-#             (f"5:8 {YIELDS_SECTION_IN_DOCSTR_MSG}",),
-#             id="method no yield yields in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring.
+        Yields:
+        """
+''',
+            (f"5:8 {YIELDS_SECTION_IN_DOCSTR_MSG}",),
+            id="method no yield yields in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring.
 
-#     Yields:
-#     """
-#     yield
-# ''',
-#             (f"3:4 {YIELDS_SECTION_IN_DOCSTR_MSG}",),
-#             id="function yield no value yields in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring.
+    Yields:
+    """
+    yield
+''',
+            (f"3:4 {YIELDS_SECTION_IN_DOCSTR_MSG}",),
+            id="function yield no value yields in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring.
 
-#     Yields:
+    Yields:
 
-#     Yields:
-#     """
-#     yield 1
-# ''',
-#             (f"3:4 {MULT_YIELDS_SECTIONS_IN_DOCSTR_MSG % 'Yields,Yields'}",),
-#             id="function yield multiple yields in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring.
+    Yields:
+    """
+    yield 1
+''',
+            (f"3:4 {MULT_YIELDS_SECTIONS_IN_DOCSTR_MSG % 'Yields,Yields'}",),
+            id="function yield multiple yields in docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring.
 
-#     Yields:
+    Yields:
 
-#     Yields:
-#     """
-#     yield from tuple()
-# ''',
-#             (f"3:4 {MULT_YIELDS_SECTIONS_IN_DOCSTR_MSG % 'Yields,Yields'}",),
-#             id="function yield from multiple yields in docstring",
-#         ),
-#         pytest.param(
-#             '''
-# class Class1:
-#     """Docstring."""
-#     def function_1():
-#         """Docstring.
+    Yields:
+    """
+    yield from tuple()
+''',
+            (f"3:4 {MULT_YIELDS_SECTIONS_IN_DOCSTR_MSG % 'Yields,Yields'}",),
+            id="function yield from multiple yields in docstring",
+        ),
+        pytest.param(
+            '''
+class Class1:
+    """Docstring."""
+    def function_1():
+        """Docstring.
 
-#         Yields:
+        Yields:
 
-#         Yields:
-#         """
-#         yield 1
-# ''',
-#             (f"5:8 {MULT_YIELDS_SECTIONS_IN_DOCSTR_MSG % 'Yields,Yields'}",),
-#             id="method yield multiple yields in docstring",
-#         ),
+        Yields:
+        """
+        yield 1
+''',
+            (f"5:8 {MULT_YIELDS_SECTIONS_IN_DOCSTR_MSG % 'Yields,Yields'}",),
+            id="method yield multiple yields in docstring",
+        ),
 #         pytest.param(
 #             '''
 # async def function_1():

@@ -44,19 +44,6 @@ fn _core(py: Python<'_>,m: &Bound<'_, PyModule>) -> PyResult<()> {
     let _ = constants.add("MORE_INFO_BASE", constants::MORE_INFO_BASE);
     let _ = constants.add("DOCSTR_MISSING_CODE", constants::docstr_missing_code());
     let _ = constants.add("DOCSTR_MISSING_MSG", constants::docstr_missing_msg());
-    let _ = constants.add("returns_section_not_in_docstr_code", constants::returns_section_not_in_docstr_code());
-    let _ = constants.add("returns_section_not_in_docstr_msg", constants::returns_section_not_in_docstr_msg());
-    let _ = constants.add("returns_section_in_docstr_code", constants::returns_section_in_docstr_code());
-    let _ = constants.add("returns_section_in_docstr_msg", constants::returns_section_in_docstr_msg());
-    let _ = constants.add("mult_returns_sections_in_docstr_code", constants::mult_returns_sections_in_docstr_code());
-    // let _ = constants.add("mult_returns_sections_in_docstr_msg", constants::mult_returns_sections_in_docstr_msg());
-    let _ = constants.add("yields_section_not_in_docstr_code", constants::yields_section_not_in_docstr_code());
-    let _ = constants.add("yields_section_not_in_docstr_msg", constants::yields_section_not_in_docstr_msg());
-    let _ = constants.add("yields_section_in_docstr_code", constants::yields_section_in_docstr_code());
-    let _ = constants.add("yields_section_in_docstr_msg", constants::yields_section_in_docstr_msg());
-    let _ = constants.add("mult_yields_sections_in_docstr_code", constants::mult_yields_sections_in_docstr_code());
-    let _ = constants.add("mult_yields_sections_in_docstr_msg", constants::mult_yields_sections_in_docstr_msg());
-
     m.add_submodule(&constants)?;
 
     Ok(())

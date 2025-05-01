@@ -16,17 +16,6 @@ def function_1():
 }
 
 #[test]
-fn test_rule_40_function_empty_yield_value_yields_not_in_docstring()
-{
-    let code: &str = r#"
-def function_1():
-    """Docstring."""
-    yield
-"#;
-    let expected: Vec<String> = Vec::new();
-    general_test(code, expected);
-}
-#[test]
 fn test_rule_40_private_function_single_yield_value_yields_not_in_docstring()
 {
     let code: &str = r#"

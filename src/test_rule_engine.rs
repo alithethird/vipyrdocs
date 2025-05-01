@@ -1,4 +1,6 @@
 mod test_rule_40;
+mod test_rule_41;
+mod test_rule_42;
 
 use rstest::rstest;
 use crate::rule_engine::lint_file;
