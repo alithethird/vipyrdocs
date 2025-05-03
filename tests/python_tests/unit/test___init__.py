@@ -528,33 +528,33 @@ class Class1:
             (f"5:8 {MULT_YIELDS_SECTIONS_IN_DOCSTR_MSG % 'Yields,Yields'}",),
             id="method yield multiple yields in docstring",
         ),
-#         pytest.param(
-#             '''
-# async def function_1():
-#     """Docstring 1."""
-# ''',
-#             (),
-#             id="function docstring",
-#         ),
-#         pytest.param(
-#             '''
-# async def function_1():
-#     """Docstring 1."""
+        pytest.param(
+            '''
+async def function_1():
+    """Docstring 1."""
+''',
+            (),
+            id="function docstring",
+        ),
+        pytest.param(
+            '''
+async def function_1():
+    """Docstring 1."""
 
-# async def function_2():
-#     """Docstring 2."""
-# ''',
-#             (),
-#             id="multiple functions docstring",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring 1."""
-# ''',
-#             (),
-#             id="async function docstring",
-#         ),
+async def function_2():
+    """Docstring 2."""
+''',
+            (),
+            id="multiple functions docstring",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring 1."""
+''',
+            (),
+            id="async function docstring",
+        ),
         pytest.param(
             '''
 class Class1:
@@ -565,312 +565,312 @@ class Class1:
             (f"4:4 {DOCSTR_MISSING_MSG}",),
             id="method docstring missing return",
         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring 1."""
-#     return
-# ''',
-#             (),
-#             id="function return no value docstring no returns section",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring 1.
+        pytest.param(
+            '''
+def function_1():
+    """Docstring 1."""
+    return
+''',
+            (),
+            id="function return no value docstring no returns section",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring 1.
 
-#     Returns:
-#     """
-#     return 1
-# ''',
-#             (),
-#             id="function return value docstring returns section",
-#         ),
-#         pytest.param(
-#             '''
-# def _function_1():
-#     """Docstring 1.
+    Returns:
+    """
+    return 1
+''',
+            (),
+            id="function return value docstring returns section",
+        ),
+        pytest.param(
+            '''
+def _function_1():
+    """Docstring 1.
 
-#     Returns:
-#     """
-#     return 1
-# ''',
-#             (),
-#             id="private function return value docstring returns section",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring 1."""
-#     def function_2():
-#         """Docstring 2.
+    Returns:
+    """
+    return 1
+''',
+            (),
+            id="private function return value docstring returns section",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring 1."""
+    def function_2():
+        """Docstring 2.
 
-#         Returns:
-#         """
-#         return 1
-# ''',
-#             (),
-#             id="function return value in nested function docstring no returns section",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring 1."""
-#     async def function_2():
-#         """Docstring 2.
+        Returns:
+        """
+        return 1
+''',
+            (),
+            id="function return value in nested function docstring no returns section",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring 1."""
+    async def function_2():
+        """Docstring 2.
 
-#         Returns:
-#         """
-#         return 1
-# ''',
-#             (),
-#             id="function return value in nested async function docstring no returns section",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring 1."""
-#     class Class1:
-#         """Docstring."""
-#         return 1
-# ''',
-#             (),
-#             id="function return value in class docstring no returns section",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring 1.
+        Returns:
+        """
+        return 1
+''',
+            (),
+            id="function return value in nested async function docstring no returns section",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring 1."""
+    class Class1:
+        """Docstring."""
+        return 1
+''',
+            (),
+            id="function return value in class docstring no returns section",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring 1.
 
-#     Returns:
-#     """
-#     return 1
-#     return 2
-# ''',
-#             (),
-#             id="function multiple return values docstring returns section",
-#         ),
-#         pytest.param(
-#             '''
-# class Class1:
-#     """Docstring."""
-#     def function_1(self):
-#         """Docstring 1.
+    Returns:
+    """
+    return 1
+    return 2
+''',
+            (),
+            id="function multiple return values docstring returns section",
+        ),
+        pytest.param(
+            '''
+class Class1:
+    """Docstring."""
+    def function_1(self):
+        """Docstring 1.
 
-#         Returns:
-#         """
-#         return 1
-# ''',
-#             (),
-#             id="method return value docstring returns section",
-#         ),
-#         pytest.param(
-#             '''
-# class Class1:
-#     """Docstring.
+        Returns:
+        """
+        return 1
+''',
+            (),
+            id="method return value docstring returns section",
+        ),
+        pytest.param(
+            '''
+class Class1:
+    """Docstring.
 
-#     Attrs:
-#         function_1:
-#     """
-#     @property
-#     def function_1(self):
-#         """Docstring 1."""
-#         return 1
-# ''',
-#             (),
-#             id="property return value docstring no returns section",
-#         ),
-#         pytest.param(
-#             '''
-# class Class1:
-#     """Docstring.
+    Attrs:
+        function_1:
+    """
+    @property
+    def function_1(self):
+        """Docstring 1."""
+        return 1
+''',
+            (),
+            id="property return value docstring no returns section",
+        ),
+        pytest.param(
+            '''
+class Class1:
+    """Docstring.
 
-#     Attrs:
-#         function_1:
-#     """
-#     @cached_property
-#     def function_1(self):
-#         """Docstring 1."""
-#         return 1
-# ''',
-#             (),
-#             id="cached_property return value docstring no returns section",
-#         ),
-#         pytest.param(
-#             '''
-# class Class1:
-#     """Docstring.
+    Attrs:
+        function_1:
+    """
+    @cached_property
+    def function_1(self):
+        """Docstring 1."""
+        return 1
+''',
+            (),
+            id="cached_property return value docstring no returns section",
+        ),
+        pytest.param(
+            '''
+class Class1:
+    """Docstring.
 
-#     Attrs:
-#         function_1:
-#     """
-#     @functools.cached_property
-#     def function_1(self):
-#         """Docstring 1."""
-#         return 1
-# ''',
-#             (),
-#             id="functools.cached_property return value docstring no returns section",
-#         ),
-#         pytest.param(
-#             '''
-# class Class1:
-#     """Docstring.
+    Attrs:
+        function_1:
+    """
+    @functools.cached_property
+    def function_1(self):
+        """Docstring 1."""
+        return 1
+''',
+            (),
+            id="functools.cached_property return value docstring no returns section",
+        ),
+        pytest.param(
+            '''
+class Class1:
+    """Docstring.
 
-#     Attrs:
-#         function_1:
-#     """
-#     @property
-#     async def function_1(self):
-#         """Docstring 1."""
-#         return 1
-# ''',
-#             (),
-#             id="async property return value docstring no returns section",
-#         ),
-#         pytest.param(
-#             '''
-# class Class1:
-#     """Docstring.
+    Attrs:
+        function_1:
+    """
+    @property
+    async def function_1(self):
+        """Docstring 1."""
+        return 1
+''',
+            (),
+            id="async property return value docstring no returns section",
+        ),
+        pytest.param(
+            '''
+class Class1:
+    """Docstring.
 
-#     Attrs:
-#         function_1:
-#     """
-#     @property()
-#     def function_1(self):
-#         """Docstring 1."""
-#         return 1
-# ''',
-#             (),
-#             id="property call return value docstring no returns section",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring 1."""
-#     yield
-# ''',
-#             (),
-#             id="function yield no value docstring no yields section",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring 1.
+    Attrs:
+        function_1:
+    """
+    @property()
+    def function_1(self):
+        """Docstring 1."""
+        return 1
+''',
+            (),
+            id="property call return value docstring no returns section",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring 1."""
+    yield
+''',
+            (),
+            id="function yield no value docstring no yields section",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring 1.
 
-#     Yields:
-#     """
-#     yield 1
-# ''',
-#             (),
-#             id="function yield value docstring yields section",
-#         ),
-#         pytest.param(
-#             '''
-# def _function_1():
-#     """Docstring 1.
+    Yields:
+    """
+    yield 1
+''',
+            (),
+            id="function yield value docstring yields section",
+        ),
+        pytest.param(
+            '''
+def _function_1():
+    """Docstring 1.
 
-#     Yields:
-#     """
-#     yield 1
-# ''',
-#             (),
-#             id="private function yield value docstring yields section",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring 1.
+    Yields:
+    """
+    yield 1
+''',
+            (),
+            id="private function yield value docstring yields section",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring 1.
 
-#     Yields:
-#     """
-#     yield from tuple()
-# ''',
-#             (),
-#             id="function yield from docstring yields section",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring 1."""
-#     def function_2():
-#         """Docstring 2.
+    Yields:
+    """
+    yield from tuple()
+''',
+            (),
+            id="function yield from docstring yields section",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring 1."""
+    def function_2():
+        """Docstring 2.
 
-#         Yields:
-#         """
-#         yield 1
-# ''',
-#             (),
-#             id="function yield value in nested function docstring no yields section",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring 1."""
-#     async def function_2():
-#         """Docstring 2.
+        Yields:
+        """
+        yield 1
+''',
+            (),
+            id="function yield value in nested function docstring no yields section",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring 1."""
+    async def function_2():
+        """Docstring 2.
 
-#         Yields:
-#         """
-#         yield 1
-# ''',
-#             (),
-#             id="function yield value in nested async function docstring no yields section",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring 1."""
-#     class Class1:
-#         """Docstring."""
-#         yield 1
-# ''',
-#             (),
-#             id="function yield value in class docstring no yields section",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring 1.
+        Yields:
+        """
+        yield 1
+''',
+            (),
+            id="function yield value in nested async function docstring no yields section",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring 1."""
+    class Class1:
+        """Docstring."""
+        yield 1
+''',
+            (),
+            id="function yield value in class docstring no yields section",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring 1.
 
-#     Yields:
-#     """
-#     yield 1
-#     yield 2
-# ''',
-#             (),
-#             id="function multiple yield values docstring yields section",
-#         ),
-#         pytest.param(
-#             '''
-# class Class1:
-#     """Docstring."""
-#     def function_1(self):
-#         """Docstring 1.
+    Yields:
+    """
+    yield 1
+    yield 2
+''',
+            (),
+            id="function multiple yield values docstring yields section",
+        ),
+        pytest.param(
+            '''
+class Class1:
+    """Docstring."""
+    def function_1(self):
+        """Docstring 1.
 
-#         Yields:
-#         """
-#         yield 1
-# ''',
-#             (),
-#             id="method yield value docstring yields section",
-#         ),
-#         pytest.param(
-#             '''
-# class Class1:
-#     """Docstring.
+        Yields:
+        """
+        yield 1
+''',
+            (),
+            id="method yield value docstring yields section",
+        ),
+        pytest.param(
+            '''
+class Class1:
+    """Docstring.
 
-#     Attrs:
-#         function_1:
-#     """
-#     @property
-#     def function_1(self):
-#         """Docstring 1."""
-#         yield 1
-# ''',
-#             (),
-#             id="property yield value docstring no yields section",
-#         ),
+    Attrs:
+        function_1:
+    """
+    @property
+    def function_1(self):
+        """Docstring 1."""
+        yield 1
+''',
+            (),
+            id="property yield value docstring no yields section",
+        ),
     ],
 )
 def test_plugin(code: str, expected_result: tuple[str, ...]):
