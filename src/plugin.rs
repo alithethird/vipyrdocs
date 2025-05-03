@@ -1,13 +1,14 @@
 use crate::docstring;
-use rustpython_ast::text_size::{ TextRange};
-use rustpython_ast::{ExprYield, ExprYieldFrom, Stmt, StmtAsyncFunctionDef, StmtClassDef, StmtFunctionDef, StmtReturn, TextSize, Visitor};
-use rustpython_parser::{
-    parse, Mode,
-};
-use std::fs;
 use crate::docstring::Docstring;
+use rustpython_ast::text_size::TextRange;
+use rustpython_ast::{
+    ExprYield, ExprYieldFrom, Stmt, StmtAsyncFunctionDef, StmtClassDef, StmtFunctionDef,
+    StmtReturn, TextSize, Visitor,
+};
+use rustpython_parser::{parse, Mode};
+use std::fs;
 
-use rustpython_ast::{Expr};
+use rustpython_ast::Expr;
 
 pub fn get_result(code: &str, filename: Option<&str>) -> DocstringCollector {
     let filename = filename.unwrap_or("<embedded>");
@@ -16,7 +17,7 @@ pub fn get_result(code: &str, filename: Option<&str>) -> DocstringCollector {
     let body = &tree_mod.as_interactive().unwrap().body;
     let mut ds = DocstringCollector {
         function_infos: Vec::new(),
-        class_infos: Vec::new()
+        class_infos: Vec::new(),
     };
     for stmt in body.iter() {
         ds.visit_stmt(stmt.clone());
@@ -28,13 +29,11 @@ pub struct DocstringCollector {
     pub class_infos: Vec<ClassInfo>,
 }
 
-
 #[derive(PartialEq, Clone)]
 pub enum YieldKind {
     Yield(ExprYield),
     YieldFrom(ExprYieldFrom),
 }
-
 
 impl YieldKind {
     // pub fn name(&self) -> &str {
@@ -57,13 +56,11 @@ impl YieldKind {
     }
 }
 
-
 #[derive(PartialEq, Clone)]
 pub enum FunctionDefKind {
     Sync(StmtFunctionDef<TextRange>),
     Async(StmtAsyncFunctionDef<TextRange>),
 }
-
 
 impl FunctionDefKind {
     pub fn name(&self) -> &str {
@@ -99,7 +96,7 @@ pub struct FunctionInfo {
     pub yields: Vec<YieldKind>,
     pub docstring: Option<Docstring>,
 }
-// 
+//
 // impl FunctionInfo{
 //     fn is_test_function(&self) -> bool {
 //         if self.def.name().starts_with("test") {
@@ -115,7 +112,6 @@ pub struct FunctionInfo {
 //     }
 // }
 
-
 #[allow(dead_code)]
 pub struct ClassInfo {
     pub def: StmtClassDef<TextRange>,
@@ -123,13 +119,13 @@ pub struct ClassInfo {
     pub docstring: Option<Docstring>,
 }
 fn get_docs(expr: &Expr<TextRange>) -> Option<Docstring> {
-    if expr.is_constant_expr(){
+    if expr.is_constant_expr() {
         let ds = expr.as_constant_expr().unwrap();
-        if !ds.clone().value.is_str(){
+        if !ds.clone().value.is_str() {
             return None;
         }
         let docstring = docstring::parse(ds.clone().value.expect_str());
-            return Some(docstring);
+        return Some(docstring);
     }
     None
 }
@@ -142,9 +138,9 @@ fn get_func(expr: &FunctionDefKind) -> FunctionInfo {
     }
 
     // Walk the function body to collect all return statements
-    let mut return_collector = ReturnCollector { returns: Vec::new() };
-    
-    let mut yield_collector = YieldCollector{ yields: Vec::new() };
+    let mut return_collector = ReturnCollector::new();
+
+    let mut yield_collector = YieldCollector::new();
     for stmt in expr.body() {
         return_collector.visit_stmt(stmt.clone());
         yield_collector.visit_stmt(stmt.clone());
@@ -159,38 +155,136 @@ fn get_func(expr: &FunctionDefKind) -> FunctionInfo {
 }
 struct YieldCollector {
     pub yields: Vec<YieldKind>,
+    func_depth: usize,
+    class_depth: usize,
+}
+
+impl YieldCollector {
+    pub fn new() -> Self {
+        Self {
+            yields: Vec::new(),
+            func_depth: 0,
+            class_depth: 0,
+        }
+    }
 }
 
 impl Visitor for YieldCollector {
+    fn visit_stmt_function_def(&mut self, node: StmtFunctionDef<TextRange>) {
+        self.func_depth += 1;
+        for stmt in &node.body {
+            self.visit_stmt(stmt.clone());
+        }
+        self.func_depth -= 1;
+    }
+
+    fn visit_stmt_async_function_def(&mut self, node: StmtAsyncFunctionDef<TextRange>) {
+        self.func_depth += 1;
+        for stmt in &node.body {
+            self.visit_stmt(stmt.clone());
+        }
+        self.func_depth -= 1;
+    }
+
+    fn visit_stmt_class_def(&mut self, node: StmtClassDef<TextRange>) {
+        self.class_depth += 1;
+        for stmt in &node.body {
+            self.visit_stmt(stmt.clone());
+        }
+        self.class_depth -= 1;
+    }
+
     fn visit_expr_yield(&mut self, node: ExprYield<TextRange>) {
-        self.yields.push(YieldKind::Yield(node));
+        if self.func_depth == 0 && self.class_depth == 0 {
+            self.yields.push(YieldKind::Yield(node));
+        }
     }
 
     fn generic_visit_expr_yield_from(&mut self, node: ExprYieldFrom<TextRange>) {
-        self.yields.push(YieldKind::YieldFrom(node));
+        if self.func_depth == 0 && self.class_depth == 0 {
+            self.yields.push(YieldKind::YieldFrom(node));
+        }
     }
 }
 struct ReturnCollector {
-    pub returns: Vec<StmtReturn>,
+    pub returns: Vec<StmtReturn<TextRange>>,
+    func_depth: usize,
+    class_depth: usize,
 }
 
-impl Visitor for ReturnCollector {
-    fn visit_stmt_return(&mut self, node: StmtReturn<TextRange>) {
-        self.returns.push(node);
+impl ReturnCollector {
+    pub fn new() -> Self {
+        Self {
+            returns: Vec::new(),
+            func_depth: 0,
+            class_depth: 0,
+        }
     }
 }
 
+impl Visitor for ReturnCollector {
+    fn visit_stmt_function_def(&mut self, node: StmtFunctionDef<TextRange>) {
+        self.func_depth += 1;
+        for stmt in &node.body {
+            self.visit_stmt(stmt.clone());
+        }
+        self.func_depth -= 1;
+    }
+
+    fn visit_stmt_async_function_def(&mut self, node: StmtAsyncFunctionDef<TextRange>) {
+        self.func_depth += 1;
+        for stmt in &node.body {
+            self.visit_stmt(stmt.clone());
+        }
+        self.func_depth -= 1;
+    }
+
+    fn visit_stmt_class_def(&mut self, node: StmtClassDef<TextRange>) {
+        self.class_depth += 1;
+        for stmt in &node.body {
+            self.visit_stmt(stmt.clone());
+        }
+        self.class_depth -= 1;
+    }
+
+    fn visit_stmt_return(&mut self, node: StmtReturn<TextRange>) {
+        if self.func_depth == 0 && self.class_depth == 0 {
+            self.returns.push(node);
+        }
+    }
+}
+
+
+// 
+// struct ReturnCollector {
+//     pub returns: Vec<StmtReturn>,
+// }
+// 
+// impl Visitor for ReturnCollector {
+//     fn visit_stmt_return(&mut self, node: StmtReturn<TextRange>) {
+//         self.returns.push(node);
+//     }
+// }
+
 impl Visitor for DocstringCollector {
     fn visit_stmt_async_function_def(&mut self, node: StmtAsyncFunctionDef<TextRange>) {
-        let function_info = get_func( &FunctionDefKind::Async(node.clone()));
-        if !self.class_infos.iter().any(|class_info| class_info.funcs.contains(&function_info)) {
+        let function_info = get_func(&FunctionDefKind::Async(node.clone()));
+        if !self
+            .class_infos
+            .iter()
+            .any(|class_info| class_info.funcs.contains(&function_info))
+        {
             self.function_infos.push(function_info);
         }
         self.generic_visit_stmt_async_function_def(node);
     }
     fn visit_stmt_function_def(&mut self, node: StmtFunctionDef<TextRange>) {
         let function_info = get_func(&FunctionDefKind::Sync(node.clone()));
-        if !self.class_infos.iter().any(|class_info| class_info.funcs.contains(&function_info)) {
+        if !self
+            .class_infos
+            .iter()
+            .any(|class_info| class_info.funcs.contains(&function_info))
+        {
             self.function_infos.push(function_info);
         }
         self.generic_visit_stmt_function_def(node);
@@ -199,18 +293,17 @@ impl Visitor for DocstringCollector {
     fn visit_stmt_class_def(&mut self, node: StmtClassDef<TextRange>) {
         let mut class_docs: Option<Docstring> = None;
         let mut class_funcs: Vec<FunctionInfo> = Vec::new();
-        
+
         for stmt in &node.body {
             if let Stmt::Expr(expr_stmt) = stmt {
                 let temp_doc = get_docs(&expr_stmt.value);
-                if !temp_doc.is_none()
-                {
+                if !temp_doc.is_none() {
                     // if !temp_doc.clone().unwrap().is_empty() {
-                        class_docs = temp_doc;
+                    class_docs = temp_doc;
                     // }
                 }
             }
-            if let Stmt::FunctionDef(func_def) = stmt{
+            if let Stmt::FunctionDef(func_def) = stmt {
                 class_funcs.push(get_func(&FunctionDefKind::Sync(func_def.clone())));
             }
         }

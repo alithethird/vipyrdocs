@@ -1,11 +1,8 @@
 use crate::constants::yields_section_not_in_docstr_msg;
 use crate::rule_engine::lint_file;
 
-
-
 #[test]
-fn test_rule_40_function_single_yield_value_yields_not_in_docstring()
-{
+fn test_rule_40_function_single_yield_value_yields_not_in_docstring() {
     let code: &str = r#"
 def function_1():
     """Docstring."""
@@ -16,8 +13,7 @@ def function_1():
 }
 
 #[test]
-fn test_rule_40_private_function_single_yield_value_yields_not_in_docstring()
-{
+fn test_rule_40_private_function_single_yield_value_yields_not_in_docstring() {
     let code: &str = r#"
 def _function_1():
     """Docstring."""
@@ -172,21 +168,15 @@ def function_1():
     general_test(code, expected);
 }
 
-
-
-
 fn general_test(code: &str, expected: Vec<String>) {
     let output = lint_file(code, None);
     println!("{:#?}", output);
     assert_eq!(output.len(), expected.len());
     for (index, exp) in expected.iter().enumerate() {
         assert_eq!(
-            &output[index],
-            exp,
+            &output[index], exp,
             "Mismatch at output index {}: got `{}`, expected `{}`",
-            index,
-            output[index],
-            exp
+            index, output[index], exp
         );
     }
 }
