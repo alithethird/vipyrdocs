@@ -1,4 +1,4 @@
-use pyo3::{prelude::*};
+use pyo3::prelude::*;
 
 use regex::Regex;
 use std::collections::HashMap;
@@ -63,8 +63,7 @@ impl _Section {
 }
 
 #[pyclass]
-#[derive(Debug, PartialEq)]
-#[derive(Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Docstring {
     args: Option<Vec<String>>,
     args_sections: Option<Vec<String>>,
@@ -141,41 +140,66 @@ impl Docstring {
     )
     }
 
-    pub fn is_empty(&self) ->bool{
-        if self.args != None || self.args_sections != None || self.attrs != None || self.attrs_sections != None || self.returns_sections != None || self.yields_sections != None || self.raises != None || self.raises_sections != None{ return false;}
+    pub fn is_empty(&self) -> bool {
+        if self.args != None
+            || self.args_sections != None
+            || self.attrs != None
+            || self.attrs_sections != None
+            || self.returns_sections != None
+            || self.yields_sections != None
+            || self.raises != None
+            || self.raises_sections != None
+        {
+            return false;
+        }
         true
     }
-    
-    pub fn has_returns(&self) -> bool{
-        if self.returns_sections.is_none(){
-            return false
+
+    pub fn has_returns(&self) -> bool {
+        if self.returns_sections.is_none() {
+            return false;
         }
-        if self.returns_sections.clone().unwrap().is_empty(){
-            return false
+        if self.returns_sections.clone().unwrap().is_empty() {
+            return false;
         }
         return true;
     }
-    pub fn get_returns(&self) -> Vec<String>{
-        if self.returns_sections.is_none(){
+    pub fn get_returns(&self) -> Vec<String> {
+        if self.returns_sections.is_none() {
             return Vec::<String>::new();
         }
         self.returns_sections.clone().unwrap()
     }
-    
-    pub fn has_yields(&self) -> bool{
-        if self.yields_sections.is_none(){
-            return false
+
+    pub fn has_yields(&self) -> bool {
+        if self.yields_sections.is_none() {
+            return false;
         }
-        if self.yields_sections.clone().unwrap().is_empty(){
-            return false
+        if self.yields_sections.clone().unwrap().is_empty() {
+            return false;
         }
         return true;
     }
-    pub fn get_yields(&self) -> Vec<String>{
-        if self.yields_sections.is_none(){
+    pub fn get_yields(&self) -> Vec<String> {
+        if self.yields_sections.is_none() {
             return Vec::<String>::new();
         }
         self.yields_sections.clone().unwrap()
+    }
+    pub fn has_args(&self) -> bool {
+        if self.args_sections.is_none() {
+            return false;
+        }
+        if self.args_sections.clone().unwrap().is_empty() {
+            return false;
+        }
+        return true;
+    }
+    pub fn get_args(&self) -> Vec<String> {
+        if self.args_sections.is_none() {
+            return Vec::<String>::new();
+        }
+        self.args_sections.clone().unwrap()
     }
 }
 
@@ -195,7 +219,6 @@ pub fn _get_sections(lines: Vec<String>) -> Vec<_Section> {
     let mut sections: Vec<_Section> = Vec::new();
     let mut lines = cleaned_lines.into_iter().peekable();
 
-
     while let Some(line) = lines.find(|l| !l.trim().is_empty()) {
         // Check if it's a section name
         let section_name = SECTION_NAME_PATTERN
@@ -203,7 +226,6 @@ pub fn _get_sections(lines: Vec<String>) -> Vec<_Section> {
             .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()));
 
         let mut section_lines: Vec<String> = Vec::new();
-
 
         // Keep collecting lines until we hit a blank line or EOF
         while let Some(peek) = lines.peek() {
@@ -253,17 +275,18 @@ fn _get_all_section_names_by_name<'a>(name: &str, sections: &'a [_Section]) -> O
             section.name.as_ref().and_then(|n| {
                 let lower = n.to_lowercase();
                 if valid_names.contains(lower.as_str()) {
-                    Some(n.clone())  // <- Return original casing
+                    Some(n.clone()) // <- Return original casing
                 } else {
                     None
                 }
             })
         })
         .collect();
-    if all_section_names.is_empty(){ return None;}
+    if all_section_names.is_empty() {
+        return None;
+    }
     Some(all_section_names)
 }
-
 
 #[pyfunction]
 pub fn parse(value: String) -> Docstring {

@@ -1,1 +1,0 @@
-for<'a, 'b> fn(&'a pyo3::Bound<'b, pyo3::types::PyModule>) -> Result<(), PyErr> {_core}

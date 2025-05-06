@@ -1,10 +1,7 @@
 use crate::docstring;
 use crate::docstring::Docstring;
 use rustpython_ast::text_size::TextRange;
-use rustpython_ast::{
-    ExprYield, ExprYieldFrom, Stmt, StmtAsyncFunctionDef, StmtClassDef, StmtFunctionDef,
-    StmtReturn, TextSize, Visitor,
-};
+use rustpython_ast::{Arguments, ExprYield, ExprYieldFrom, Stmt, StmtAsyncFunctionDef, StmtClassDef, StmtFunctionDef, StmtReturn, TextSize, Visitor};
 use rustpython_parser::{parse, Mode};
 use std::fs;
 
@@ -85,6 +82,12 @@ impl FunctionDefKind {
         match self {
             FunctionDefKind::Sync(def) => &def.decorator_list,
             FunctionDefKind::Async(def) => &def.decorator_list,
+        }
+    }
+    pub fn args(&self) -> &Box<Arguments> {
+        match self {
+            FunctionDefKind::Sync(def) => &def.args,
+            FunctionDefKind::Async(def) => &def.args,
         }
     }
 }

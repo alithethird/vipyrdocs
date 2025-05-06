@@ -4,17 +4,48 @@ from __future__ import annotations
 
 import pytest
 
-from ruff_docstrings_complete._core.constants import (
-    ARG_IN_DOCSTR_MSG,
-    ARG_NOT_IN_DOCSTR_MSG,
-    ARGS_SECTION_IN_DOCSTR_MSG,
-    ARGS_SECTION_NOT_IN_DOCSTR_MSG,
-    DUPLICATE_ARG_MSG,
-    MULT_ARGS_SECTIONS_IN_DOCSTR_MSG,
-)
-
 from ruff_docstrings_complete._core import apply_rules
 # from . import result
+from ruff_docstrings_complete._core import constants
+
+ERROR_CODE_PREFIX = constants.ERROR_CODE_PREFIX
+MORE_INFO_BASE = constants.MORE_INFO_BASE
+
+ARGS_SECTION_NOT_IN_DOCSTR_CODE = f"{ERROR_CODE_PREFIX}020"
+ARGS_SECTION_NOT_IN_DOCSTR_MSG = (
+    f"{ARGS_SECTION_NOT_IN_DOCSTR_CODE} a function/ method with arguments should have the "
+    "arguments section in the docstring"
+    f"{MORE_INFO_BASE}{ARGS_SECTION_NOT_IN_DOCSTR_CODE.lower()}"
+)
+ARGS_SECTION_IN_DOCSTR_CODE = f"{ERROR_CODE_PREFIX}021"
+ARGS_SECTION_IN_DOCSTR_MSG = (
+    f"{ARGS_SECTION_IN_DOCSTR_CODE} a function/ method without arguments should not have the "
+    "arguments section in the docstring"
+    f"{MORE_INFO_BASE}{ARGS_SECTION_IN_DOCSTR_CODE.lower()}"
+)
+MULT_ARGS_SECTIONS_IN_DOCSTR_CODE = f"{ERROR_CODE_PREFIX}022"
+MULT_ARGS_SECTIONS_IN_DOCSTR_MSG = (
+    f"{MULT_ARGS_SECTIONS_IN_DOCSTR_CODE} a docstring should only contain a single arguments "
+    f"section, found %s{MORE_INFO_BASE}{MULT_ARGS_SECTIONS_IN_DOCSTR_CODE.lower()}"
+)
+ARG_NOT_IN_DOCSTR_CODE = f"{ERROR_CODE_PREFIX}023"
+ARG_NOT_IN_DOCSTR_MSG = (
+    f'{ARG_NOT_IN_DOCSTR_CODE} "%s" argument should be described in the docstring{MORE_INFO_BASE}'
+    f"{ARG_NOT_IN_DOCSTR_CODE.lower()}"
+)
+ARG_IN_DOCSTR_CODE = f"{ERROR_CODE_PREFIX}024"
+ARG_IN_DOCSTR_MSG = (
+    f'{ARG_IN_DOCSTR_CODE} "%s" argument should not be described in the docstring{MORE_INFO_BASE}'
+    f"{ARG_IN_DOCSTR_CODE.lower()}"
+)
+DUPLICATE_ARG_CODE = f"{ERROR_CODE_PREFIX}025"
+DUPLICATE_ARG_MSG = (
+    f'{DUPLICATE_ARG_CODE} "%s" argument documented multiple times{MORE_INFO_BASE}'
+    f"{DUPLICATE_ARG_CODE.lower()}"
+)
+
+SKIP_ARGS = {"self", "cls"}
+UNUSED_ARGS_PREFIX = "_"
 
 
 @pytest.mark.parametrize(
@@ -42,28 +73,49 @@ def function_2(arg_2):
             ),
             id="multiple function has single arg docstring no args section",
         ),
-#         pytest.param(
-#             '''
-# def function_1():
-#     """Docstring 1.
+        pytest.param(
+            '''
+class Class1:
+    """Docstring."""
+    def function_1(self, arg_1):
+        """Docstring 1."""
+''',
+            (f"5:8 {ARGS_SECTION_NOT_IN_DOCSTR_MSG}",),
+            id="method has single arg docstring no args section",
+        ),
+        pytest.param(
+            '''
+def function_1():
+    """Docstring 1.
 
-#     Args:
-#     """
-# ''',
-#             (f"3:4 {ARGS_SECTION_IN_DOCSTR_MSG}",),
-#             id="function has no args docstring args section",
-#         ),
-#         pytest.param(
-#             '''
-# def _function_1():
-#     """Docstring 1.
+    Args:
+    """
+''',
+            (f"3:4 {ARGS_SECTION_IN_DOCSTR_MSG}",),
+            id="function has no args docstring args section",
+        ),
+        pytest.param(
+            '''
+def _function_1():
+    """Docstring 1.
 
-#     Args:
-#     """
-# ''',
-#             (f"3:4 {ARGS_SECTION_IN_DOCSTR_MSG}",),
-#             id="private function has no args docstring args section",
-#         ),
+    Args:
+    """
+''',
+            (f"3:4 {ARGS_SECTION_IN_DOCSTR_MSG}",),
+            id="private function has no args docstring args section",
+        ),
+        pytest.param(
+            '''
+def function_1(_arg_1):
+    """Docstring 1.
+
+    Args:
+    """
+''',
+            (f"3:4 {ARGS_SECTION_IN_DOCSTR_MSG}",),
+            id="function has single unused arg docstring args",
+        ),
 #         pytest.param(
 #             '''
 # def function_1(arg_1):
@@ -104,17 +156,6 @@ def function_2(arg_2):
 # ''',
 #             (f"2:15 {ARG_NOT_IN_DOCSTR_MSG % 'arg_1'}",),
 #             id="function has single arg docstring no arg",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1(_arg_1):
-#     """Docstring 1.
-
-#     Args:
-#     """
-# ''',
-#             (f"3:4 {ARGS_SECTION_IN_DOCSTR_MSG}",),
-#             id="function has single unused arg docstring args",
 #         ),
 #         pytest.param(
 #             '''
@@ -630,16 +671,6 @@ def function_2(arg_2):
 #             '''
 # class Class1:
 #     """Docstring."""
-#     def function_1(self, arg_1):
-#         """Docstring 1."""
-# ''',
-#             (f"5:8 {ARGS_SECTION_NOT_IN_DOCSTR_MSG}",),
-#             id="method has single arg docstring no args section",
-#         ),
-#         pytest.param(
-#             '''
-# class Class1:
-#     """Docstring."""
 #     def function_1(self):
 #         """Docstring 1.
 
@@ -757,4 +788,5 @@ def test_plugin(code: str, expected_result: tuple[str, ...]):
     when: linting is run on the code
     then: the expected result is returned
     """
-    assert result.get(code) == expected_result
+    assert tuple(apply_rules(code)) == expected_result
+1

@@ -1,11 +1,10 @@
+mod test_rule_20;
+mod test_rule_21;
 mod test_rule_40;
 mod test_rule_41;
 mod test_rule_42;
 
-use crate::constants::{
-    returns_section_in_docstr_msg, returns_section_not_in_docstr_msg,
-    yields_section_not_in_docstr_msg,
-};
+use crate::constants::{returns_section_in_docstr_msg, returns_section_not_in_docstr_msg};
 use crate::rule_engine::lint_file;
 use rstest::rstest;
 

@@ -1,4 +1,3 @@
-
 pub const ERROR_CODE_PREFIX: &str = "D";
 pub const MORE_INFO_BASE: &str = " (more info: https://example.com/";
 
@@ -11,6 +10,30 @@ pub fn docstr_missing_msg() -> String {
         docstr_missing_code(),
         MORE_INFO_BASE,
         docstr_missing_code().to_lowercase()
+    )
+}
+
+pub fn args_section_not_in_docstr_code() -> String {
+    format!("{}020", ERROR_CODE_PREFIX)
+}
+pub fn args_section_not_in_docstr_msg() -> String {
+    format!(
+        "{} a function/ method with arguments should have the arguments section in the docstring{}{}",
+        args_section_not_in_docstr_code(),
+        MORE_INFO_BASE,
+        args_section_not_in_docstr_code().to_lowercase()
+    )
+}
+
+pub fn args_section_in_docstr_code() -> String {
+    format!("{}021", ERROR_CODE_PREFIX)
+}
+pub fn args_section_in_docstr_msg() -> String {
+    format!(
+        "{} a function/ method without arguments should not have the arguments section in the docstring{}{}",
+        args_section_in_docstr_code(),
+        MORE_INFO_BASE,
+        args_section_in_docstr_code().to_lowercase()
     )
 }
 
