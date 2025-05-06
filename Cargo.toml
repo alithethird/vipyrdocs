@@ -1,5 +1,5 @@
 [package]
-name = "ruff_docstrings_complete"
+name = "vipyrdocs"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,6 +7,9 @@ edition = "2021"
 name = "_core"
 # "cdylib" is necessary to produce a shared library for Python to import from.
 crate-type = ["cdylib"]
+[[bin]]
+name = "vipyrdocs"
+path = "src/main.rs"  # Adjust if your binary source file is elsewhere
 
 [dependencies]
 lazy_static = "1.5.0"
@@ -17,3 +20,4 @@ regex = "1.11.1"
 rustpython-ast = { version = "0.4.0", features = ["visitor"] }
 rustpython-parser = "0.4.0"
 rstest = "0.25.0"
+clap = { version = "4.5", features = ["derive"] }
