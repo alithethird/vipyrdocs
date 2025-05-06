@@ -1,5 +1,6 @@
 use crate::constants::{
-    docstr_missing_msg, mult_returns_sections_in_docstr_msg, mult_yields_sections_in_docstr_msg,
+    args_section_in_docstr_msg, args_section_not_in_docstr_msg, docstr_missing_msg,
+    mult_returns_sections_in_docstr_msg, mult_yields_sections_in_docstr_msg,
     returns_section_in_docstr_msg, returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
     yields_section_not_in_docstr_msg,
 };
@@ -113,12 +114,6 @@ fn format_problem(line: usize, line_location: usize, error_msg: String) -> Strin
     format!("{}:{} {}", line, line_location, error_msg)
 }
 
-
-
-
-
-
-
 fn check_functions_for_multiple_yields_section(
     function_infos: &Vec<FunctionInfo>,
     file_contents: &str,
@@ -202,7 +197,52 @@ fn check_functions_for_multiple_returns_section(
 
     problem_functions
 }
+fn check_functions_for_extra_args_section(
+    function_infos: &Vec<FunctionInfo>,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut problem_functions: Vec<String> = Vec::new();
 
+    for function in function_infos {
+        if should_skip_dont_skip_private(function, is_test_file) {
+            continue;
+        }
+
+        // ignore if function doesn't have docstrings
+        if function.docstring.is_none() {
+            continue;
+        }
+
+        let args = function.def.args();
+
+        if args.args.len() > 0 {
+            continue;
+        }
+
+        let _range = function.def.range();
+        let doc_loc = find_string_in_text_range(file_contents, _range.clone(), vec!["\"\"\""]);
+        let (line, line_location, _) = doc_loc.first().unwrap().to_owned();
+
+        if function.docstring.clone().unwrap().has_args() {
+            let mut _range = function.def.range();
+            let args_lines =
+                find_string_in_text_range(file_contents, _range.clone(), vec!["Args:"]);
+            if args_lines.is_empty() {
+                continue;
+            }
+            for (line, line_location, _) in args_lines {
+                problem_functions.push(format_problem(
+                    line,
+                    line_location,
+                    args_section_in_docstr_msg(),
+                ));
+            }
+        }
+    }
+
+    problem_functions
+}
 fn check_functions_for_extra_yields_section(
     function_infos: &Vec<FunctionInfo>,
     file_contents: &str,
@@ -330,6 +370,40 @@ fn check_functions_for_missing_yields_section(
     problem_functions
 }
 
+fn check_functions_for_missing_args_section(
+    function_infos: &Vec<FunctionInfo>,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut problem_functions: Vec<String> = Vec::new();
+
+    for function in function_infos {
+        if should_skip(function, is_test_file) {
+            continue;
+        }
+        // ignore if function doesn't have args
+        let args = function.def.args();
+        if args.args.len() == 0 {
+            continue;
+        }
+
+        if function.docstring.is_none() {
+            continue;
+        }
+
+        let _range = function.def.range();
+        let doc_loc = find_string_in_text_range(file_contents, _range.clone(), vec!["\"\"\""]);
+        let (line, line_location, _) = doc_loc.first().unwrap().to_owned();
+
+        problem_functions.push(format_problem(
+            line + 2,
+            line_location,
+            args_section_not_in_docstr_msg(),
+        ));
+    }
+
+    problem_functions
+}
 
 fn check_functions_for_missing_returns_section(
     function_infos: &Vec<FunctionInfo>,
@@ -432,7 +506,20 @@ fn generate_rules_output(
         file_contents,
         is_test_file,
     ));
-
+    // DC020: function/ method with arguments should have the
+    // arguments section in the docstring
+    problem_functions.extend(check_functions_for_missing_args_section(
+        &things.function_infos,
+        file_contents,
+        is_test_file,
+    ));
+    // DC021: function/ method without arguments should not have the
+    // arguments section in the docstring
+    problem_functions.extend(check_functions_for_extra_args_section(
+        &things.function_infos,
+        file_contents,
+        is_test_file,
+    ));
     for class_info in &things.class_infos {
         problem_functions.extend(check_functions_for_missing_docstring(
             &class_info.funcs,
@@ -469,10 +556,19 @@ fn generate_rules_output(
             file_contents,
             is_test_file,
         ));
+        problem_functions.extend(check_functions_for_missing_args_section(
+            &class_info.funcs,
+            file_contents,
+            is_test_file,
+        ));
+        problem_functions.extend(check_functions_for_extra_args_section(
+            &things.function_infos,
+            file_contents,
+            is_test_file,
+        ));
     }
     problem_functions
 }
-
 
 fn check_functions_for_missing_docstring(
     function_infos: &Vec<FunctionInfo>,
@@ -663,7 +759,9 @@ fn should_skip_dont_skip_private(function: &FunctionInfo, is_test_file: bool) ->
     if func_name.starts_with("test_") && is_test_file {
         return true;
     }
-    if is_cached_property(function.def.clone()){return true;}
+    if is_cached_property(function.def.clone()) {
+        return true;
+    }
     if is_fixture(function.def.clone()) && is_test_file {
         return true;
     }
@@ -683,7 +781,9 @@ fn should_skip(function: &FunctionInfo, is_test_file: bool) -> bool {
     if func_name.starts_with("test_") && is_test_file {
         return true;
     }
-    if is_cached_property(function.def.clone()){return true;}
+    if is_cached_property(function.def.clone()) {
+        return true;
+    }
     if is_fixture(function.def.clone()) && is_test_file {
         return true;
     }
