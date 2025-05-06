@@ -25,7 +25,7 @@ Or use maturin to build a Python-compatible wheel:
 maturin develop
 ```
 
-🧪 Usage
+## 🧪 Usage
 
 ```
 vipyrdocs path/to/your/python/project
@@ -33,18 +33,15 @@ vipyrdocs path/to/your/python/project
 
 Outputs any functions/classes missing docstrings or having incomplete ones.
 
-🔮 Roadmap
+## 🔮 Roadmap
 
-Configurable docstring rules
+- Configurable docstring rules
+- Output in JSON / SARIF
+- Git pre-commit hook support
+- VSCode integration
 
- Output in JSON / SARIF
-
- Git pre-commit hook support
-
- VSCode integration
-
-📜 License
+## 📜 License
 
 MIT
 
-vipyrdocs is not affiliated with flake8, but draws inspiration from its ecosystem.
+`vipyrdocs is not affiliated with flake8, but draws inspiration from its ecosystem.`
