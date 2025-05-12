@@ -1,7 +1,8 @@
 use crate::constants::{
     args_section_in_docstr_msg, args_section_not_in_docstr_msg, docstr_missing_msg,
-    mult_returns_sections_in_docstr_msg, mult_yields_sections_in_docstr_msg,
-    returns_section_in_docstr_msg, returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
+    mult_args_sections_in_docstr_msg, mult_returns_sections_in_docstr_msg,
+    mult_yields_sections_in_docstr_msg, returns_section_in_docstr_msg,
+    returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
     yields_section_not_in_docstr_msg,
 };
 use crate::plugin::{get_result, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind};
@@ -67,12 +68,12 @@ pub fn find_string_in_text_range(
     let start = usize::try_from(range.start().to_u32()).unwrap();
     let end = usize::try_from(range.end().to_u32()).unwrap();
 
-    let sub = &s[start..end];
+    let sub = &s[start..end].to_lowercase();
     let mut positions: Vec<(usize, usize, String)> = Vec::new();
 
     for target in target_strings {
         let mut offset = 0;
-        while let Some(pos) = sub[offset..].find(target) {
+        while let Some(pos) = sub[offset..].find(&target.to_lowercase()) {
             let absolute_pos = start + offset + pos;
 
             // Find line and column
@@ -112,6 +113,55 @@ fn find_line_and_column(s: &str, char_index: usize) -> Option<(usize, usize)> {
 
 fn format_problem(line: usize, line_location: usize, error_msg: String) -> String {
     format!("{}:{} {}", line, line_location, error_msg)
+}
+fn check_functions_for_multiple_args_section(
+    function_infos: &Vec<FunctionInfo>,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut problem_functions: Vec<String> = Vec::new();
+
+    for function in function_infos {
+        if should_skip(function, is_test_file) {
+            continue;
+        }
+
+        // ignore if function doesn't have docstrings
+        if function.docstring.is_none() {
+            continue;
+        }
+
+        let args = function.def.args();
+        let clean_args = cleanse_args(&args.args);
+        // ignore if function doesn't have args
+        if clean_args.is_empty() {
+            continue;
+        }
+        if function.docstring.clone().unwrap().get_args().len() > 1 {
+            let mut _range = function.def.range();
+            let args_lines = find_string_in_text_range(
+                file_contents,
+                _range,
+                vec!["Args:", "Arguments:", "Parameters:"],
+            );
+            if args_lines.len() < 2 {
+                continue;
+            }
+            let mut founds: Vec<String> = Vec::new();
+            for (_, _, found) in &args_lines {
+                // the latest char is a : which we do not want
+                founds.push(found[..found.len() - 1].to_string());
+            }
+            let (line, line_location, _) = args_lines.first().unwrap().to_owned();
+            problem_functions.push(format_problem(
+                line,
+                line_location,
+                mult_args_sections_in_docstr_msg(founds.join(",").to_string()),
+            ));
+        }
+    }
+
+    problem_functions
 }
 
 fn check_functions_for_multiple_yields_section(
@@ -394,11 +444,15 @@ fn check_functions_for_missing_args_section(
         let args = function.def.args();
         let clean_args = cleanse_args(&args.args);
 
-        if clean_args.len() == 0 {
+        if clean_args.is_empty() {
             continue;
         }
 
         if function.docstring.is_none() {
+            continue;
+        }
+
+        if function.docstring.clone().unwrap().has_args() {
             continue;
         }
 
@@ -531,6 +585,13 @@ fn generate_rules_output(
         file_contents,
         is_test_file,
     ));
+    // DC022: function/ method without arguments should not have the
+    // arguments section in the docstring
+    problem_functions.extend(check_functions_for_multiple_args_section(
+        &things.function_infos,
+        file_contents,
+        is_test_file,
+    ));
     for class_info in &things.class_infos {
         problem_functions.extend(check_functions_for_missing_docstring(
             &class_info.funcs,
@@ -573,6 +634,11 @@ fn generate_rules_output(
             is_test_file,
         ));
         problem_functions.extend(check_functions_for_extra_args_section(
+            &class_info.funcs,
+            file_contents,
+            is_test_file,
+        ));
+        problem_functions.extend(check_functions_for_multiple_args_section(
             &class_info.funcs,
             file_contents,
             is_test_file,
