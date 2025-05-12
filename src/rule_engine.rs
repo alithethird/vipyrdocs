@@ -7,7 +7,7 @@ use crate::constants::{
 use crate::plugin::{get_result, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind};
 use pyo3::prelude::*;
 use rustpython_ast::text_size::TextRange;
-use rustpython_ast::{Expr, ExprAttribute, ExprCall, StmtReturn};
+use rustpython_ast::{ArgWithDefault, Expr, ExprAttribute, ExprCall, StmtReturn};
 use std::fs;
 
 use pyo3;
@@ -215,8 +215,8 @@ fn check_functions_for_extra_args_section(
         }
 
         let args = function.def.args();
-
-        if args.args.len() > 0 {
+        let clean_args = cleanse_args(&args.args);
+        if clean_args.len() > 0 {
             continue;
         }
 
@@ -243,6 +243,19 @@ fn check_functions_for_extra_args_section(
 
     problem_functions
 }
+
+fn cleanse_args(args: &Vec<ArgWithDefault>) -> Vec<String> {
+    
+    let mut clean_args: Vec<String> = Vec::new();
+    for arg in args {
+        let arg_name = arg.def.arg.trim();
+        if arg_name == "self" { continue}
+        if arg_name.starts_with("_") { continue}
+        clean_args.push(arg_name.to_string());
+    }
+    return clean_args;
+}
+
 fn check_functions_for_extra_yields_section(
     function_infos: &Vec<FunctionInfo>,
     file_contents: &str,
@@ -383,7 +396,9 @@ fn check_functions_for_missing_args_section(
         }
         // ignore if function doesn't have args
         let args = function.def.args();
-        if args.args.len() == 0 {
+        let clean_args = cleanse_args(&args.args);
+
+        if clean_args.len() == 0 {
             continue;
         }
 

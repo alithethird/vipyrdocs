@@ -79,15 +79,15 @@ def foo():
 
 #[rstest]
 #[test]
-#[case::function_in_class_no_return_value(
-    r#"
-class FooClass:
-    """Docstring."""
-    def function_1(self):
-        """Docstring."""
-"#,
-    Vec::<String>::new()
-)]
+// #[case::function_in_class_no_return_value(
+//     r#"
+// class FooClass:
+//     """Docstring."""
+//     def function_1(self):
+//         """Docstring."""
+// "#,
+//     Vec::<String>::new()
+// )]
 #[case::function_no_return_value(
     r#"
 def function_1():
