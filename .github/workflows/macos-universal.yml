@@ -1,0 +1,63 @@
+name: Build macOS Universal Binary
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Universal macOS Binary
+    runs-on: macos-latest
+
+    strategy:
+      matrix:
+        target: [x86_64-apple-darwin, aarch64-apple-darwin]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Build for ${{ matrix.target }}
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.target }}-binary
+          path: target/${{ matrix.target }}/release/vipyrdocs
+
+  combine:
+    name: Create Universal Binary
+    runs-on: macos-latest
+    needs: build
+
+    steps:
+      - name: Download x86_64 binary
+        uses: actions/download-artifact@v3
+        with:
+          name: x86_64-apple-darwin-binary
+          path: ./x86
+
+      - name: Download aarch64 binary
+        uses: actions/download-artifact@v3
+        with:
+          name: aarch64-apple-darwin-binary
+          path: ./arm
+
+      - name: Combine into universal binary
+        run: |
+          lipo -create \
+            ./x86/vipyrdocs \
+            ./arm/vipyrdocs \
+            -output vipyrdocs_universal
+          chmod +x vipyrdocs_universal
+
+      - name: Upload Universal Binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: universal-binary
+          path: vipyrdocs_universal
