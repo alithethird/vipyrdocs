@@ -37,6 +37,18 @@ pub fn args_section_in_docstr_msg() -> String {
     )
 }
 
+pub fn mult_args_sections_in_docstr_code() -> String {
+    format!("{}022", ERROR_CODE_PREFIX)
+}
+pub fn mult_args_sections_in_docstr_msg(found: String) -> String {
+    format!(
+        "{} a docstring should only contain a single arguments section, found {}{}{}",
+        mult_args_sections_in_docstr_code(),
+        found.to_string(),
+        MORE_INFO_BASE,
+        mult_args_sections_in_docstr_code().to_lowercase()
+    )
+}
 pub fn returns_section_not_in_docstr_code() -> String {
     format!("{}030", ERROR_CODE_PREFIX)
 }
