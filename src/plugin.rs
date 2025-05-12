@@ -322,25 +322,3 @@ impl Visitor for DocstringCollector {
     }
 }
 
-#[test]
-pub fn test_get_result() {
-    let _iter_args = r#"Iterate over all arguments.
-
-    Adds vararg and kwarg to the args.
-
-    Args:
-        args: The arguments to iter over.
-
-    Yields:
-        All the arguments.
-    "#;
-
-    let file_path = "/home/aliu/dev/ruff-docstrings-complete/flake8-docstrings-complete-main/flake8_docstrings_complete/attrs.py";
-
-    let contents = fs::read_to_string(file_path).expect("Should have been able to read the file");
-
-    // get_result(code_str, None);
-    let docstrings = get_result(contents.as_str(), Some(file_path));
-
-    assert_eq!(docstrings.class_infos.len(), 1);
-}
