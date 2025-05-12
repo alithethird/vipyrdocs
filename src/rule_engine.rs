@@ -61,7 +61,7 @@ pub fn apply_rules(code: &str, file_name: Option<&str>) -> Vec<String> {
 /// Returns (line_number, column_number) on success. Both are 1-based.
 pub fn find_string_in_text_range(
     s: &str,
-    range: TextRange,
+    range: &TextRange,
     target_strings: Vec<&str>,
 ) -> Vec<(usize, usize, String)> {
     let start = usize::try_from(range.start().to_u32()).unwrap();
@@ -134,7 +134,7 @@ fn check_functions_for_multiple_yields_section(
         if function.docstring.clone().unwrap().get_yields().len() > 1 {
             let mut _range = function.def.range();
             let yield_lines =
-                find_string_in_text_range(file_contents, _range.clone(), vec!["Yield:", "Yields:"]);
+                find_string_in_text_range(file_contents, _range, vec!["Yield:", "Yields:"]);
             if yield_lines.len() < 2 {
                 continue;
             }
@@ -173,11 +173,8 @@ fn check_functions_for_multiple_returns_section(
 
         if function.docstring.clone().unwrap().get_returns().len() > 1 {
             let mut _range = function.def.range();
-            let return_lines = find_string_in_text_range(
-                file_contents,
-                _range.clone(),
-                vec!["Return:", "Returns:"],
-            );
+            let return_lines =
+                find_string_in_text_range(file_contents, _range, vec!["Return:", "Returns:"]);
             if return_lines.len() < 2 {
                 continue;
             }
@@ -216,18 +213,17 @@ fn check_functions_for_extra_args_section(
 
         let args = function.def.args();
         let clean_args = cleanse_args(&args.args);
-        if clean_args.len() > 0 {
+        if !clean_args.is_empty() {
             continue;
         }
 
         let _range = function.def.range();
-        let doc_loc = find_string_in_text_range(file_contents, _range.clone(), vec!["\"\"\""]);
-        let (line, line_location, _) = doc_loc.first().unwrap().to_owned();
+        // let doc_loc = find_string_in_text_range(file_contents, _range, vec!["\"\"\""]);
+        // let (line, line_location, _) = doc_loc.first().unwrap().to_owned();
 
         if function.docstring.clone().unwrap().has_args() {
             let mut _range = function.def.range();
-            let args_lines =
-                find_string_in_text_range(file_contents, _range.clone(), vec!["Args:"]);
+            let args_lines = find_string_in_text_range(file_contents, _range, vec!["Args:"]);
             if args_lines.is_empty() {
                 continue;
             }
@@ -245,15 +241,18 @@ fn check_functions_for_extra_args_section(
 }
 
 fn cleanse_args(args: &Vec<ArgWithDefault>) -> Vec<String> {
-    
     let mut clean_args: Vec<String> = Vec::new();
     for arg in args {
         let arg_name = arg.def.arg.trim();
-        if arg_name == "self" { continue}
-        if arg_name.starts_with("_") { continue}
+        if arg_name == "self" {
+            continue;
+        }
+        if arg_name.starts_with("_") {
+            continue;
+        }
         clean_args.push(arg_name.to_string());
     }
-    return clean_args;
+    clean_args
 }
 
 fn check_functions_for_extra_yields_section(
@@ -277,22 +276,19 @@ fn check_functions_for_extra_yields_section(
 
         if (yield_statements.len() == 1
             && is_yield_empty(&file_contents, yield_statements.first().unwrap()))
-            || yield_statements.is_empty()
+            || yield_statements.is_empty() && function.docstring.clone().unwrap().has_yields()
         {
-            if function.docstring.clone().unwrap().has_yields() {
-                let mut _range = function.def.range();
-                let yield_lines =
-                    find_string_in_text_range(file_contents, _range.clone(), vec!["Yields:"]);
-                if yield_lines.is_empty() {
-                    continue;
-                }
-                for (line, line_location, _) in yield_lines {
-                    problem_functions.push(format_problem(
-                        line,
-                        line_location,
-                        yields_section_in_docstr_msg(),
-                    ));
-                }
+            let mut _range = function.def.range();
+            let yield_lines = find_string_in_text_range(file_contents, _range, vec!["Yields:"]);
+            if yield_lines.is_empty() {
+                continue;
+            }
+            for (line, line_location, _) in yield_lines {
+                problem_functions.push(format_problem(
+                    line,
+                    line_location,
+                    yields_section_in_docstr_msg(),
+                ));
             }
         }
     }
@@ -324,7 +320,7 @@ fn check_functions_for_extra_returns_section(
             if function.docstring.clone().unwrap().has_returns() {
                 let mut _range = function.def.range();
                 let return_lines =
-                    find_string_in_text_range(file_contents, _range.clone(), vec!["Returns:"]);
+                    find_string_in_text_range(file_contents, _range, vec!["Returns:"]);
                 if return_lines.is_empty() {
                     continue;
                 }
@@ -407,7 +403,7 @@ fn check_functions_for_missing_args_section(
         }
 
         let _range = function.def.range();
-        let doc_loc = find_string_in_text_range(file_contents, _range.clone(), vec!["\"\"\""]);
+        let doc_loc = find_string_in_text_range(file_contents, _range, vec!["\"\"\""]);
         let (line, line_location, _) = doc_loc.first().unwrap().to_owned();
 
         problem_functions.push(format_problem(
@@ -577,7 +573,7 @@ fn generate_rules_output(
             is_test_file,
         ));
         problem_functions.extend(check_functions_for_extra_args_section(
-            &things.function_infos,
+            &class_info.funcs,
             file_contents,
             is_test_file,
         ));
