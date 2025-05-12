@@ -24,6 +24,9 @@ jobs:
       - name: Build for ${{ matrix.target }}
         run: cargo build --release --target ${{ matrix.target }}
 
+      - name: Verify binary existence
+        run: ls target/${{ matrix.target }}/release/vipyrdocs || exit 1
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
