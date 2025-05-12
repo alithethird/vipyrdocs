@@ -60,7 +60,7 @@ jobs:
           chmod +x vipyrdocs_universal
 
       - name: Upload Universal Binary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: universal-binary
           path: vipyrdocs_universal
