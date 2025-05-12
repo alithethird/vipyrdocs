@@ -1,9 +1,11 @@
 use crate::docstring;
 use crate::docstring::Docstring;
 use rustpython_ast::text_size::TextRange;
-use rustpython_ast::{Arguments, ExprYield, ExprYieldFrom, Stmt, StmtAsyncFunctionDef, StmtClassDef, StmtFunctionDef, StmtReturn, TextSize, Visitor};
+use rustpython_ast::{
+    Arguments, ExprYield, ExprYieldFrom, Stmt, StmtAsyncFunctionDef, StmtClassDef, StmtFunctionDef,
+    StmtReturn, Visitor,
+};
 use rustpython_parser::{parse, Mode};
-use std::fs;
 
 use rustpython_ast::Expr;
 
@@ -19,7 +21,7 @@ pub fn get_result(code: &str, filename: Option<&str>) -> DocstringCollector {
     for stmt in body.iter() {
         ds.visit_stmt(stmt.clone());
     }
-    return ds;
+    ds
 }
 pub struct DocstringCollector {
     pub function_infos: Vec<FunctionInfo>,
@@ -257,12 +259,11 @@ impl Visitor for ReturnCollector {
     }
 }
 
-
-// 
+//
 // struct ReturnCollector {
 //     pub returns: Vec<StmtReturn>,
 // }
-// 
+//
 // impl Visitor for ReturnCollector {
 //     fn visit_stmt_return(&mut self, node: StmtReturn<TextRange>) {
 //         self.returns.push(node);
@@ -321,4 +322,3 @@ impl Visitor for DocstringCollector {
         self.generic_visit_stmt_class_def(node);
     }
 }
-

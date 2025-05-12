@@ -52,3 +52,18 @@ def function_1(_arg_1):
     let expected: Vec<String> = vec![format!("3:4 {}", args_section_in_docstr_msg())];
     general_test(code, expected);
 }
+
+#[test]
+fn test_rule_21_method_has_no_args_docstring_args_section() {
+    let code: &str = r#"
+class Class1:
+    """Docstring."""
+    def function_1(self):
+        """Docstring 1.
+
+        Args:
+        """
+"#;
+    let expected: Vec<String> = vec![format!("5:8 {}", args_section_in_docstr_msg())];
+    general_test(code, expected);
+}

@@ -667,19 +667,19 @@ def function_1(_arg_1):
 #             (),
 #             id="function multiple arg first unused docstring single arg",
 #         ),
-#         pytest.param(
-#             '''
-# class Class1:
-#     """Docstring."""
-#     def function_1(self):
-#         """Docstring 1.
+        pytest.param(
+            '''
+class Class1:
+    """Docstring."""
+    def function_1(self):
+        """Docstring 1.
 
-#         Args:
-#         """
-# ''',
-#             (f"5:8 {ARGS_SECTION_IN_DOCSTR_MSG}",),
-#             id="method has no args docstring args section",
-#         ),
+        Args:
+        """
+''',
+            (f"5:8 {ARGS_SECTION_IN_DOCSTR_MSG}",),
+            id="method has no args docstring args section",
+        ),
 #         pytest.param(
 #             '''
 # class Class1:
