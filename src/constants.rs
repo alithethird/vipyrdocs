@@ -49,6 +49,18 @@ pub fn mult_args_sections_in_docstr_msg(found: String) -> String {
         mult_args_sections_in_docstr_code().to_lowercase()
     )
 }
+pub fn arg_not_in_docstr_code() -> String {
+    format!("{}023", ERROR_CODE_PREFIX)
+}
+pub fn arg_not_in_docstr_msg(_arg: &str) -> String {
+    format!(
+        "{} \"{}\" argument should be described in the docstring{}{}",
+        arg_not_in_docstr_code(),
+        _arg,
+        MORE_INFO_BASE,
+        arg_not_in_docstr_code().to_lowercase()
+    )
+}
 pub fn returns_section_not_in_docstr_code() -> String {
     format!("{}030", ERROR_CODE_PREFIX)
 }
