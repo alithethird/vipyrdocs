@@ -116,36 +116,36 @@ def function_1(_arg_1):
             (f"3:4 {ARGS_SECTION_IN_DOCSTR_MSG}",),
             id="function has single unused arg docstring args",
         ),
-#         pytest.param(
-#             '''
-# def function_1(arg_1):
-#     """Docstring 1.
+pytest.param(
+    '''
+ def function_1(arg_1):
+     """Docstring 1.
 
-#     Args:
-#         arg_1:
+     Args:
+arg_1:
 
-#     Args:
-#         arg_1:
-#     """
-# ''',
-#             (f"3:4 {MULT_ARGS_SECTIONS_IN_DOCSTR_MSG % 'Args,Args'}",),
-#             id="function has single args docstring multiple args sections same name",
-#         ),
-#         pytest.param(
-#             '''
-# def function_1(arg_1):
-#     """Docstring 1.
+     Args:
+arg_1:
+     """
+ ''',
+    (f"3:4 {MULT_ARGS_SECTIONS_IN_DOCSTR_MSG % 'Args,Args'}",),
+    id="function has single args docstring multiple args sections same name",
+),
+pytest.param(
+    '''
+ def function_1(arg_1):
+     """Docstring 1.
 
-#     Args:
-#         arg_1:
+     Args:
+arg_1:
 
-#     Arguments:
-#         arg_1:
-#     """
-# ''',
-#             (f"3:4 {MULT_ARGS_SECTIONS_IN_DOCSTR_MSG % 'Args,Arguments'}",),
-#             id="function has single args docstring multiple args sections different name",
-#         ),
+     Arguments:
+arg_1:
+     """
+ ''',
+    (f"3:4 {MULT_ARGS_SECTIONS_IN_DOCSTR_MSG % 'Args,Arguments'}",),
+    id="function has single args docstring multiple args sections different name",
+),
 #         pytest.param(
 #             '''
 # def function_1(arg_1):
