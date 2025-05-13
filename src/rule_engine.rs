@@ -22,9 +22,7 @@ fn is_test_file(file_name: Option<&str>) -> bool {
     if file_name.is_some() {
         let file_name = file_name.unwrap().split('/').last().unwrap();
 
-        if file_name.starts_with("test_") {
-            return true;
-        } else if file_name.starts_with("conftest.py") {
+        if file_name.starts_with("test_") || file_name.starts_with("conftest.py") {
             return true;
         }
     }
@@ -127,7 +125,7 @@ fn check_functions_for_multiple_args_section(
         }
 
         // ignore if function doesn't have docstrings
-        if function.docstring.is_none() {
+        if !function.docstring.is_some() {
             continue;
         }
 
