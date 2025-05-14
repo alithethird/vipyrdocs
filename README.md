@@ -40,6 +40,35 @@ Outputs any functions/classes missing docstrings or having incomplete ones.
 - Git pre-commit hook support
 - VSCode integration
 
+### Current rules 9/26
+
+- 👌 DCO010: docstring missing on a function/ method/ class.
+- 👌 DCO020: function/ method has one or more arguments and the docstring does not have an arguments section.
+- 👌 DCO021: function/ method with no arguments and the docstring has an arguments section.
+- 👌 DCO022: function/ method with one or more arguments and the docstring has multiple arguments sections.
+- 🙅 DCO023: function/ method has one or more arguments not described in the docstring.
+- 🙅 DCO024: function/ method has one or more arguments described in the docstring which are not arguments of the function/ method.
+- 🙅 DCO025: function/ method has one or more arguments described in the docstring multiple times.
+- 👌DCO030: function/ method that returns a value does not have the returns section in the docstring.
+- 👌DCO031: function/ method that does not return a value has the returns section in the docstring.
+- 👌DCO032: function/ method that returns a value and the docstring has multiple returns sections.
+- 👌DCO040: function/ method that yields a value does not have the yields section in the docstring.
+- 👌DCO041: function/ method that does not yield a value has the yields section in the docstring.
+- 👌DCO042: function/ method that yields a value and the docstring has multiple yields sections.
+- 🙅 DCO050: function/ method raises one or more exceptions and the docstring does not have a raises section.
+- 🙅 DCO051: function/ method that raises no exceptions and the docstring has a raises section.
+- 🙅 DCO052: function/ method that raises one or more exceptions and the docstring has multiple raises sections.
+- 🙅 DCO053: function/ method that raises one or more exceptions where one or more of the exceptions is not described in the docstring.
+- 🙅 DCO054: function/ method has one or more exceptions described in the docstring which are not raised in the function/ method.
+- 🙅 DCO055: function/ method that has a raise without an exception has an empty raises section in the docstring.
+- 🙅 DCO056: function/ method has one or more exceptions described in the docstring multiple times.
+- 🙅 DCO060: class has one or more public attributes and the docstring does not have an attributes section.
+- 🙅 DCO061: class with no attributes and the docstring has an attributes section.
+- 🙅 DCO062: class with one or more attributes and the docstring has multiple attributes sections.
+- 🙅 DCO063: class has one or more public attributes not described in the docstring.
+- 🙅 DCO064: class has one or more attributes described in the docstring which are not attributes of the class.
+- 🙅 DCO065: class has one or more attributes described in the docstring multiple times.
+
 ## 📜 License
 
 MIT
