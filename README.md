@@ -46,7 +46,7 @@ Outputs any functions/classes missing docstrings or having incomplete ones.
 - 👌 DCO020: function/ method has one or more arguments and the docstring does not have an arguments section.
 - 👌 DCO021: function/ method with no arguments and the docstring has an arguments section.
 - 👌 DCO022: function/ method with one or more arguments and the docstring has multiple arguments sections.
-- 🙅 DCO023: function/ method has one or more arguments not described in the docstring.
+- 👌 DCO023: function/ method has one or more arguments not described in the docstring.
 - 🙅 DCO024: function/ method has one or more arguments described in the docstring which are not arguments of the function/ method.
 - 🙅 DCO025: function/ method has one or more arguments described in the docstring multiple times.
 - 👌DCO030: function/ method that returns a value does not have the returns section in the docstring.
