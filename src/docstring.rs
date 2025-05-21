@@ -126,7 +126,7 @@ impl Docstring {
             && sorted(&self.raises) == sorted(&other.raises)
             && sorted(&self.raises_sections) == sorted(&other.raises_sections))
     }
-    fn __repr__(&self) -> String {
+    pub fn __repr__(&self) -> String {
         format!(
         "Docstring(\n  args={:?},\n  args_sections={:?},\n  attrs={:?},\n  attrs_sections={:?},\n  returns_sections={:?},\n  yields_sections={:?},\n  raises={:?},\n  raises_sections={:?}\n)",
         self.args,
@@ -141,14 +141,14 @@ impl Docstring {
     }
 
     pub fn is_empty(&self) -> bool {
-        if self.args != None
-            || self.args_sections != None
-            || self.attrs != None
-            || self.attrs_sections != None
-            || self.returns_sections != None
-            || self.yields_sections != None
-            || self.raises != None
-            || self.raises_sections != None
+        if self.args.is_some()
+            || self.args_sections.is_some()
+            || self.attrs.is_some()
+            || self.attrs_sections.is_some()
+            || self.returns_sections.is_some()
+            || self.yields_sections.is_some()
+            || self.raises.is_some()
+            || self.raises_sections.is_some()
         {
             return false;
         }
@@ -162,7 +162,7 @@ impl Docstring {
         if self.returns_sections.clone().unwrap().is_empty() {
             return false;
         }
-        return true;
+        true
     }
     pub fn get_returns(&self) -> Vec<String> {
         if self.returns_sections.is_none() {
@@ -178,7 +178,7 @@ impl Docstring {
         if self.yields_sections.clone().unwrap().is_empty() {
             return false;
         }
-        return true;
+        true
     }
     pub fn get_yields(&self) -> Vec<String> {
         if self.yields_sections.is_none() {
@@ -186,20 +186,35 @@ impl Docstring {
         }
         self.yields_sections.clone().unwrap()
     }
-    pub fn has_args(&self) -> bool {
+    pub fn has_args_sections(&self) -> bool {
         if self.args_sections.is_none() {
             return false;
         }
         if self.args_sections.clone().unwrap().is_empty() {
             return false;
         }
-        return true;
+        true
     }
-    pub fn get_args(&self) -> Vec<String> {
+    pub fn get_args_sections(&self) -> Vec<String> {
         if self.args_sections.is_none() {
             return Vec::<String>::new();
         }
         self.args_sections.clone().unwrap()
+    }
+    pub fn has_args(&self) -> bool {
+        if self.args.is_none() {
+            return false;
+        }
+        if self.args.clone().unwrap().is_empty() {
+            return false;
+        }
+        true
+    }
+    pub fn get_args(&self) -> Vec<String> {
+        if self.args.is_none() {
+            return Vec::<String>::new();
+        }
+        self.args.clone().unwrap()
     }
 }
 
@@ -296,7 +311,7 @@ pub fn parse(value: String) -> Docstring {
     let attrs_section = _get_section_by_name("attrs", &sections);
     let raises_section = _get_section_by_name("raises", &sections);
 
-    return Docstring::new(
+    Docstring::new(
         args_section.map(|s| s.subs.clone()),
         _get_all_section_names_by_name("args", &sections),
         attrs_section.map(|s| s.subs.clone()),
@@ -305,11 +320,11 @@ pub fn parse(value: String) -> Docstring {
         _get_all_section_names_by_name("yields", &sections),
         raises_section.map(|s| s.subs.clone()),
         _get_all_section_names_by_name("raises", &sections),
-    );
+    )
 }
 
 fn empty_docstring() -> Docstring {
-    return Docstring::new(None, None, None, None, None, None, None, None);
+    Docstring::new(None, None, None, None, None, None, None, None)
 }
 ////////// Tests
 

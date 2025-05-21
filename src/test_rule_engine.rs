@@ -1,6 +1,8 @@
+#[cfg(test)]
 mod test_rule_20;
 mod test_rule_21;
 mod test_rule_22;
+mod test_rule_23;
 mod test_rule_40;
 mod test_rule_41;
 mod test_rule_42;
