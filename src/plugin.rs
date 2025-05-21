@@ -86,7 +86,7 @@ impl FunctionDefKind {
             FunctionDefKind::Async(def) => &def.decorator_list,
         }
     }
-    pub fn args(&self) -> &Box<Arguments> {
+    pub fn args(&self) -> &Arguments {
         match self {
             FunctionDefKind::Sync(def) => &def.args,
             FunctionDefKind::Async(def) => &def.args,
@@ -301,7 +301,7 @@ impl Visitor for DocstringCollector {
         for stmt in &node.body {
             if let Stmt::Expr(expr_stmt) = stmt {
                 let temp_doc = get_docs(&expr_stmt.value);
-                if !temp_doc.is_none() {
+                if temp_doc.is_some() {
                     // if !temp_doc.clone().unwrap().is_empty() {
                     class_docs = temp_doc;
                     // }

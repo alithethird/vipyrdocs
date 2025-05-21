@@ -1,3 +1,4 @@
+#[cfg(test)]
 use crate::constants::args_section_in_docstr_msg;
 use crate::rule_engine::lint_file;
 

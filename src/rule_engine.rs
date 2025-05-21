@@ -1,6 +1,6 @@
 use crate::constants::{
-    args_section_in_docstr_msg, args_section_not_in_docstr_msg, docstr_missing_msg,
-    mult_args_sections_in_docstr_msg, mult_returns_sections_in_docstr_msg,
+    arg_not_in_docstr_msg, args_section_in_docstr_msg, args_section_not_in_docstr_msg,
+    docstr_missing_msg, mult_args_sections_in_docstr_msg, mult_returns_sections_in_docstr_msg,
     mult_yields_sections_in_docstr_msg, returns_section_in_docstr_msg,
     returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
     yields_section_not_in_docstr_msg,
@@ -8,19 +8,17 @@ use crate::constants::{
 use crate::plugin::{get_result, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind};
 use pyo3::prelude::*;
 use rustpython_ast::text_size::TextRange;
-use rustpython_ast::{ArgWithDefault, Expr, ExprAttribute, ExprCall, StmtReturn};
+use rustpython_ast::{Arguments, Expr, ExprAttribute, ExprCall, StmtReturn};
 use std::fs;
-
-use pyo3;
 
 fn read_file(file_name: &str) -> String {
     // Read the file and return the contents
-    fs::read_to_string(&file_name).unwrap_or_default()
+    fs::read_to_string(file_name).unwrap_or_default()
 }
 
 fn is_test_file(file_name: Option<&str>) -> bool {
     if file_name.is_some() {
-        let file_name = file_name.unwrap().split('/').last().unwrap();
+        let file_name = file_name.unwrap().split('/').next_back().unwrap();
 
         if file_name.starts_with("test_") || file_name.starts_with("conftest.py") {
             return true;
@@ -46,11 +44,11 @@ pub fn lint_file(code: &str, file_name: Option<&str>) -> Vec<String> {
 pub fn apply_rules(code: &str, file_name: Option<&str>) -> Vec<String> {
     let mut output: Vec<String> = Vec::new();
 
-    let things = get_result(&code, file_name);
+    let things = get_result(code, file_name);
 
     let test_file = is_test_file(file_name);
 
-    output.extend(generate_rules_output(&code, &things, test_file));
+    output.extend(generate_rules_output(code, &things, test_file));
 
     // apply the rules
     output
@@ -112,6 +110,118 @@ fn find_line_and_column(s: &str, char_index: usize) -> Option<(usize, usize)> {
 fn format_problem(line: usize, line_location: usize, error_msg: String) -> String {
     format!("{}:{} {}", line, line_location, error_msg)
 }
+fn check_functions_for_missing_arg_in_args_section(
+    function_infos: &Vec<FunctionInfo>,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut problem_functions: Vec<String> = Vec::new();
+
+    for function in function_infos {
+        if should_skip(function, is_test_file) {
+            continue;
+        }
+
+        // ignore if function doesn't have docstrings
+        if function.docstring.is_none() {
+            continue;
+        }
+
+        let args = function.def.args();
+        let clean_args = cleanse_args(args);
+        // ignore if function doesn't have args
+        if is_args_empty(&clean_args) {
+            continue;
+        }
+
+        let docstring_args_sections = function.docstring.clone().unwrap().get_args_sections();
+        let docstring_args = function.docstring.clone().unwrap().get_args();
+
+        println!("{}", function.docstring.clone().unwrap().__repr__());
+        if docstring_args_sections.is_empty() {
+            continue;
+        }
+        println!("docstring_args: {:?}", docstring_args);
+        println!("clean_args: {:?}", clean_args);
+        let mut _range = function.def.range();
+        // if DC022 is here we don't need to check for DC023
+        if function
+            .docstring
+            .clone()
+            .unwrap()
+            .get_args_sections()
+            .len()
+            > 1
+        {
+            continue;
+        }
+
+        if clean_args.vararg.is_some() {
+            let arg_name = clean_args.vararg.unwrap().arg.to_string();
+            if let Some(_result) =
+                is_arg_in_docstring(arg_name, &docstring_args, _range, file_contents)
+            {
+                problem_functions.push(_result);
+            }
+        }
+        if clean_args.kwarg.is_some() {
+            let arg_name = clean_args.kwarg.unwrap().arg.to_string();
+            if let Some(_result) =
+                is_arg_in_docstring(arg_name, &docstring_args, _range, file_contents)
+            {
+                problem_functions.push(_result);
+            }
+        }
+        for arg in clean_args.args {
+            let arg_name = arg.def.arg.to_string();
+            if let Some(_result) =
+                is_arg_in_docstring(arg_name, &docstring_args, _range, file_contents)
+            {
+                problem_functions.push(_result);
+            }
+        }
+        for arg in clean_args.kwonlyargs {
+            let arg_name = arg.def.arg.to_string();
+            if let Some(_result) =
+                is_arg_in_docstring(arg_name, &docstring_args, _range, file_contents)
+            {
+                problem_functions.push(_result);
+            }
+        }
+        for arg in clean_args.posonlyargs {
+            let arg_name = arg.def.arg.to_string();
+            if let Some(_result) =
+                is_arg_in_docstring(arg_name, &docstring_args, _range, file_contents)
+            {
+                problem_functions.push(_result);
+            }
+        }
+    }
+
+    problem_functions
+}
+
+fn is_arg_in_docstring(
+    arg_name: String,
+    docstring_args: &Vec<String>,
+    _range: &TextRange,
+    file_contents: &str,
+) -> Option<String> {
+    println!(
+        "arg: {}, docstring_args: {:?}, contains",
+        arg_name, docstring_args
+    );
+    if !docstring_args.contains(&arg_name) {
+        let args_lines = find_string_in_text_range(file_contents, _range, vec![arg_name.as_str()]);
+        let (line, line_location, _) = args_lines.first().unwrap().to_owned();
+        return Some(format_problem(
+            line + 2,
+            line_location,
+            arg_not_in_docstr_msg(arg_name.as_str()),
+        ));
+    }
+    None
+}
 fn check_functions_for_multiple_args_section(
     function_infos: &Vec<FunctionInfo>,
     file_contents: &str,
@@ -125,23 +235,31 @@ fn check_functions_for_multiple_args_section(
         }
 
         // ignore if function doesn't have docstrings
-        if !function.docstring.is_some() {
+        if function.docstring.is_none() {
             continue;
         }
 
         let args = function.def.args();
-        let clean_args = cleanse_args(&args.args);
+        let clean_args = cleanse_args(args);
         // ignore if function doesn't have args
-        if clean_args.is_empty() {
+        if is_args_empty(&clean_args) {
             continue;
         }
-        if function.docstring.clone().unwrap().get_args().len() > 1 {
+        if function
+            .docstring
+            .clone()
+            .unwrap()
+            .get_args_sections()
+            .len()
+            > 1
+        {
             let mut _range = function.def.range();
             let args_lines = find_string_in_text_range(
                 file_contents,
                 _range,
                 vec!["Args:", "Arguments:", "Parameters:"],
             );
+            println!("args_lines: {:?}", args_lines);
             if args_lines.len() < 2 {
                 continue;
             }
@@ -260,8 +378,8 @@ fn check_functions_for_extra_args_section(
         }
 
         let args = function.def.args();
-        let clean_args = cleanse_args(&args.args);
-        if !clean_args.is_empty() {
+        let clean_args = cleanse_args(args);
+        if !is_args_empty(&clean_args) {
             continue;
         }
 
@@ -269,7 +387,7 @@ fn check_functions_for_extra_args_section(
         // let doc_loc = find_string_in_text_range(file_contents, _range, vec!["\"\"\""]);
         // let (line, line_location, _) = doc_loc.first().unwrap().to_owned();
 
-        if function.docstring.clone().unwrap().has_args() {
+        if function.docstring.clone().unwrap().has_args_sections() {
             let mut _range = function.def.range();
             let args_lines = find_string_in_text_range(file_contents, _range, vec!["Args:"]);
             if args_lines.is_empty() {
@@ -288,17 +406,35 @@ fn check_functions_for_extra_args_section(
     problem_functions
 }
 
-fn cleanse_args(args: &Vec<ArgWithDefault>) -> Vec<String> {
-    let mut clean_args: Vec<String> = Vec::new();
-    for arg in args {
+fn cleanse_args(args: &Arguments) -> Arguments {
+    let mut clean_args: Arguments = args.clone();
+    for (index, arg) in args.args.iter().enumerate() {
         let arg_name = arg.def.arg.trim();
         if arg_name == "self" {
-            continue;
+            clean_args.args.remove(index);
         }
         if arg_name.starts_with("_") {
-            continue;
+            clean_args.args.remove(index);
         }
-        clean_args.push(arg_name.to_string());
+    }
+
+    for (index, arg) in args.kwonlyargs.iter().enumerate() {
+        let arg_name = arg.def.arg.trim();
+        if arg_name == "self" {
+            clean_args.kwonlyargs.remove(index);
+        }
+        if arg_name.starts_with("_") {
+            clean_args.kwonlyargs.remove(index);
+        }
+    }
+    for (index, arg) in args.posonlyargs.iter().enumerate() {
+        let arg_name = arg.def.arg.trim();
+        if arg_name == "self" {
+            clean_args.posonlyargs.remove(index);
+        }
+        if arg_name.starts_with("_") {
+            clean_args.posonlyargs.remove(index);
+        }
     }
     clean_args
 }
@@ -354,7 +490,6 @@ fn check_functions_for_extra_returns_section(
         if should_skip_dont_skip_private(function, is_test_file) {
             continue;
         }
-
         // ignore if function doesn't have docstrings
         if function.docstring.is_none() {
             continue;
@@ -362,23 +497,21 @@ fn check_functions_for_extra_returns_section(
 
         let return_statements: &Vec<StmtReturn> = &function.returns;
 
-        if (return_statements.len() == 1 && return_statements.first().unwrap().value == None)
-            || return_statements.is_empty()
+        if ((return_statements.len() == 1 && return_statements.first().unwrap().value.is_none())
+            || return_statements.is_empty())
+            && function.docstring.clone().unwrap().has_returns()
         {
-            if function.docstring.clone().unwrap().has_returns() {
-                let mut _range = function.def.range();
-                let return_lines =
-                    find_string_in_text_range(file_contents, _range, vec!["Returns:"]);
-                if return_lines.is_empty() {
-                    continue;
-                }
-                for (line, line_location, _) in return_lines {
-                    problem_functions.push(format_problem(
-                        line,
-                        line_location,
-                        returns_section_in_docstr_msg(),
-                    ));
-                }
+            let mut _range = function.def.range();
+            let return_lines = find_string_in_text_range(file_contents, _range, vec!["Returns:"]);
+            if return_lines.is_empty() {
+                continue;
+            }
+            for (line, line_location, _) in return_lines {
+                problem_functions.push(format_problem(
+                    line,
+                    line_location,
+                    returns_section_in_docstr_msg(),
+                ));
             }
         }
     }
@@ -427,6 +560,25 @@ fn check_functions_for_missing_yields_section(
     problem_functions
 }
 
+fn is_args_empty(args: &Arguments) -> bool {
+    if args.vararg.is_some() {
+        return false;
+    }
+    if args.kwarg.is_some() {
+        return false;
+    }
+    if !args.kwonlyargs.is_empty() {
+        return false;
+    }
+    if !args.args.is_empty() {
+        return false;
+    }
+    if !args.posonlyargs.is_empty() {
+        return false;
+    }
+    true
+}
+
 fn check_functions_for_missing_args_section(
     function_infos: &Vec<FunctionInfo>,
     file_contents: &str,
@@ -440,9 +592,9 @@ fn check_functions_for_missing_args_section(
         }
         // ignore if function doesn't have args
         let args = function.def.args();
-        let clean_args = cleanse_args(&args.args);
+        let clean_args = cleanse_args(args);
 
-        if clean_args.is_empty() {
+        if is_args_empty(&clean_args) {
             continue;
         }
 
@@ -450,7 +602,7 @@ fn check_functions_for_missing_args_section(
             continue;
         }
 
-        if function.docstring.clone().unwrap().has_args() {
+        if function.docstring.clone().unwrap().has_args_sections() {
             continue;
         }
 
@@ -590,6 +742,13 @@ fn generate_rules_output(
         file_contents,
         is_test_file,
     ));
+    // DC023: argument should be described in the docstring
+    problem_functions.extend(check_functions_for_missing_arg_in_args_section(
+        &things.function_infos,
+        file_contents,
+        is_test_file,
+    ));
+
     for class_info in &things.class_infos {
         problem_functions.extend(check_functions_for_missing_docstring(
             &class_info.funcs,
@@ -641,6 +800,11 @@ fn generate_rules_output(
             file_contents,
             is_test_file,
         ));
+        problem_functions.extend(check_functions_for_missing_arg_in_args_section(
+            &class_info.funcs,
+            file_contents,
+            is_test_file,
+        ));
     }
     problem_functions
 }
@@ -672,7 +836,7 @@ fn is_property(function: &FunctionInfo) -> bool {
     for decorator in function.def.decorator_list() {
         if decorator.is_name_expr() {
             let id = &decorator.as_name_expr().unwrap().id;
-            if id.to_string() == "property" {
+            if id.eq_ignore_ascii_case("property") {
                 return true;
             }
         }
@@ -680,7 +844,7 @@ fn is_property(function: &FunctionInfo) -> bool {
             let call: &ExprCall = decorator.as_call_expr().unwrap();
             if let Some(name_expr) = call.func.as_name_expr() {
                 let id = &name_expr.id;
-                if id.to_string() == "property" {
+                if id.eq_ignore_ascii_case("property") {
                     return true;
                 }
             }
@@ -694,7 +858,7 @@ fn is_overload(function: &FunctionInfo) -> bool {
     for decorator in function.def.decorator_list() {
         if decorator.is_name_expr() {
             let id = &decorator.as_name_expr().unwrap().id;
-            if id.to_string() == "overload" {
+            if id.eq_ignore_ascii_case("overload") {
                 return true;
             }
         }
@@ -703,7 +867,7 @@ fn is_overload(function: &FunctionInfo) -> bool {
             let call: &ExprCall = decorator.as_call_expr().unwrap();
             if let Some(name_expr) = call.func.as_name_expr() {
                 let id = &name_expr.id;
-                if id.to_string() == "overload" {
+                if id.eq_ignore_ascii_case("overload") {
                     return true;
                 }
             }
@@ -726,11 +890,9 @@ fn is_fixture(function: FunctionDefKind) -> bool {
     let mut is_fixture = false;
 
     for decorator in function.decorator_list() {
-        if decorator.is_name_expr() {
-            if is_name_fixture_decorator(decorator) {
-                is_fixture = true;
-                break;
-            }
+        if decorator.is_name_expr() && is_name_fixture_decorator(decorator) {
+            is_fixture = true;
+            break;
         }
 
         if decorator.is_call_expr() {
@@ -744,7 +906,7 @@ fn is_fixture(function: FunctionDefKind) -> bool {
             }
             if let Some(name_expr) = call.func.as_name_expr() {
                 let id = &name_expr.id;
-                if id.to_string() == "fixture" {
+                if id.eq_ignore_ascii_case("fixture") {
                     is_fixture = true;
                     break;
                 }
@@ -752,7 +914,7 @@ fn is_fixture(function: FunctionDefKind) -> bool {
         }
         if decorator.is_attribute_expr() {
             let attr: &ExprAttribute = decorator.as_attribute_expr().unwrap();
-            if attr.attr.to_string() == "fixture" {
+            if attr.attr.eq_ignore_ascii_case("fixture") {
                 is_fixture = true;
                 break;
             }
@@ -768,7 +930,7 @@ fn is_cached_property(function: FunctionDefKind) -> bool {
     for decorator in function.decorator_list() {
         if decorator.is_name_expr() {
             let id = &decorator.as_name_expr().unwrap().id;
-            if id.to_string() == "cached_property" {
+            if id.eq_ignore_ascii_case("cached_property") {
                 return true;
             }
         }
@@ -777,14 +939,14 @@ fn is_cached_property(function: FunctionDefKind) -> bool {
             let call: &ExprCall = decorator.as_call_expr().unwrap();
             let _f = call.func.clone();
             if let Some(attr_expr) = call.func.as_attribute_expr() {
-                if attr_expr.attr.to_string() == "cached_property" {
+                if attr_expr.attr.eq_ignore_ascii_case("cached_property") {
                     is_fixture = true;
                     break;
                 }
             }
             if let Some(name_expr) = call.func.as_name_expr() {
                 let id = &name_expr.id;
-                if id.to_string() == "fixture" {
+                if id.eq_ignore_ascii_case("fixture") {
                     is_fixture = true;
                     break;
                 }
@@ -792,7 +954,7 @@ fn is_cached_property(function: FunctionDefKind) -> bool {
         }
         if decorator.is_attribute_expr() {
             let attr: &ExprAttribute = decorator.as_attribute_expr().unwrap();
-            if attr.attr.to_string() == "cached_property" {
+            if attr.attr.eq_ignore_ascii_case("cached_property") {
                 is_fixture = true;
                 break;
             }
@@ -824,10 +986,10 @@ fn is_name_fixture_decorator(decorator: &Expr) -> bool {
 fn should_skip_dont_skip_private(function: &FunctionInfo, is_test_file: bool) -> bool {
     // ignore overloads
     // Skip function if *any* decorator is an overload
-    if is_overload(&function) {
+    if is_overload(function) {
         return true;
     }
-    if is_property(&function) {
+    if is_property(function) {
         return true;
     }
     let func_name = function.def.name().to_string();
@@ -840,16 +1002,16 @@ fn should_skip_dont_skip_private(function: &FunctionInfo, is_test_file: bool) ->
     if is_fixture(function.def.clone()) && is_test_file {
         return true;
     }
-    return false;
+    false
 }
 
 fn should_skip(function: &FunctionInfo, is_test_file: bool) -> bool {
     // ignore overloads
     // Skip function if *any* decorator is an overload
-    if is_overload(&function) {
+    if is_overload(function) {
         return true;
     }
-    if is_property(&function) {
+    if is_property(function) {
         return true;
     }
     let func_name = function.def.name().to_string();
@@ -865,5 +1027,5 @@ fn should_skip(function: &FunctionInfo, is_test_file: bool) -> bool {
     if func_name.starts_with("_") {
         return true;
     }
-    return false;
+    false
 }

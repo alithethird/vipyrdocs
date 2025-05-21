@@ -1,3 +1,4 @@
+#[cfg(test)]
 use crate::constants::yields_section_not_in_docstr_msg;
 use crate::rule_engine::lint_file;
 
