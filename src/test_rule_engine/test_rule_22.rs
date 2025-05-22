@@ -29,7 +29,7 @@ arg_1:
 "#;
     let expected: Vec<String> = vec![format!(
         "3:4 {}",
-        mult_args_sections_in_docstr_msg("Args,Args".to_string())
+        mult_args_sections_in_docstr_msg("Args,Args")
     )];
     general_test(code, expected);
 }
@@ -49,7 +49,7 @@ arg_1:
 "#;
     let expected: Vec<String> = vec![format!(
         "3:4 {}",
-        mult_args_sections_in_docstr_msg("Args,Arguments".to_string())
+        mult_args_sections_in_docstr_msg("Args,Arguments")
     )];
     general_test(code, expected);
 }

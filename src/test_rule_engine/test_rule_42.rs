@@ -16,7 +16,7 @@ def function_1():
 "#;
     let expected: Vec<String> = vec![format!(
         "3:4 {}",
-        mult_yields_sections_in_docstr_msg("Yields,Yields".to_string())
+        mult_yields_sections_in_docstr_msg("Yields,Yields")
     )];
     general_test(code, expected);
 }
@@ -35,7 +35,7 @@ def function_1():
 "#;
     let expected: Vec<String> = vec![format!(
         "3:4 {}",
-        mult_yields_sections_in_docstr_msg("Yields,Yields".to_string())
+        mult_yields_sections_in_docstr_msg("Yields,Yields")
     )];
     general_test(code, expected);
 }
@@ -56,7 +56,7 @@ class Class1:
 "#;
     let expected: Vec<String> = vec![format!(
         "5:8 {}",
-        mult_yields_sections_in_docstr_msg("Yields,Yields".to_string())
+        mult_yields_sections_in_docstr_msg("Yields,Yields")
     )];
     general_test(code, expected);
 }
