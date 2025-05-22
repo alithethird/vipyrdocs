@@ -129,7 +129,7 @@ fn get_docs(expr: &Expr<TextRange>) -> Option<Docstring> {
         if !ds.clone().value.is_str() {
             return None;
         }
-        let docstring = docstring::parse(ds.clone().value.expect_str());
+        let docstring = docstring::parse(ds);
         return Some(docstring);
     }
     None
