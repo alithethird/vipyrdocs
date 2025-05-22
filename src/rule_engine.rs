@@ -1,8 +1,8 @@
 use crate::constants::{
-    arg_not_in_docstr_msg, args_section_in_docstr_msg, args_section_not_in_docstr_msg,
-    docstr_missing_msg, mult_args_sections_in_docstr_msg, mult_returns_sections_in_docstr_msg,
-    mult_yields_sections_in_docstr_msg, returns_section_in_docstr_msg,
-    returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
+    arg_in_docstr_msg, arg_not_in_docstr_msg, args_section_in_docstr_msg,
+    args_section_not_in_docstr_msg, docstr_missing_msg, mult_args_sections_in_docstr_msg,
+    mult_returns_sections_in_docstr_msg, mult_yields_sections_in_docstr_msg,
+    returns_section_in_docstr_msg, returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
     yields_section_not_in_docstr_msg,
 };
 use crate::plugin::{get_result, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind};
@@ -110,6 +110,91 @@ fn find_line_and_column(s: &str, char_index: usize) -> Option<(usize, usize)> {
 fn format_problem(line: usize, line_location: usize, error_msg: String) -> String {
     format!("{}:{} {}", line, line_location, error_msg)
 }
+
+fn check_functions_for_extra_arg_in_args_section(
+    function_infos: &Vec<FunctionInfo>,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut problem_functions: Vec<String> = Vec::new();
+
+    for function in function_infos {
+        if should_skip(function, is_test_file) {
+            continue;
+        }
+
+        // ignore if function doesn't have docstrings
+        if function.docstring.is_none() {
+            continue;
+        }
+
+        let args = function.def.args();
+        let clean_args = cleanse_args(args);
+        // ignore if function doesn't have args
+        if is_args_empty(&clean_args) {
+            continue;
+        }
+
+        let docstring_args_sections = function.docstring.clone().unwrap().get_args_sections();
+        let docstring_args = function.docstring.clone().unwrap().get_args();
+
+        println!("{}", function.docstring.clone().unwrap().__repr__());
+        if docstring_args_sections.is_empty() {
+            continue;
+        }
+        println!("docstring_args: {:?}", docstring_args);
+        println!("clean_args: {:?}", clean_args);
+        let mut _range = function.def.range();
+        // if DC022 is here we don't need to check for DC023
+        if function
+            .docstring
+            .clone()
+            .unwrap()
+            .get_args_sections()
+            .len()
+            > 1
+        {
+            continue;
+        }
+
+        let mut arg_names: Vec<String> = Vec::new();
+        if clean_args.vararg.is_some() {
+            arg_names.push(clean_args.vararg.unwrap().arg.to_string());
+            // if let Some(_result) =
+            //     is_arg_in_docstring(arg_name, &docstring_args, _range, file_contents)
+            // {
+            //     problem_functions.push(_result);
+            // }
+        }
+        if clean_args.kwarg.is_some() {
+            arg_names.push(clean_args.kwarg.unwrap().arg.to_string());
+        }
+        for arg in clean_args.args {
+            arg_names.push(arg.def.arg.to_string());
+        }
+        for arg in clean_args.kwonlyargs {
+            arg_names.push(arg.def.arg.to_string());
+        }
+        for arg in clean_args.posonlyargs {
+            arg_names.push(arg.def.arg.to_string());
+        }
+        for arg_name in docstring_args {
+            if !arg_names.contains(&arg_name) {
+                let args_lines =
+                    find_string_in_text_range(file_contents, _range, vec![arg_name.as_str()]);
+                let (line, line_location, _) = args_lines.first().unwrap().to_owned();
+                problem_functions.push(format_problem(
+                    line + 2,
+                    line_location,
+                    arg_in_docstr_msg(arg_name.as_str()),
+                ));
+            }
+        }
+    }
+
+    problem_functions
+}
+
 fn check_functions_for_missing_arg_in_args_section(
     function_infos: &Vec<FunctionInfo>,
     file_contents: &str,
@@ -272,7 +357,7 @@ fn check_functions_for_multiple_args_section(
             problem_functions.push(format_problem(
                 line,
                 line_location,
-                mult_args_sections_in_docstr_msg(founds.join(",").to_string()),
+                mult_args_sections_in_docstr_msg(founds.join(",").as_str()),
             ));
         }
     }
@@ -313,7 +398,7 @@ fn check_functions_for_multiple_yields_section(
             problem_functions.push(format_problem(
                 line,
                 line_location,
-                mult_yields_sections_in_docstr_msg(founds.join(",").to_string()),
+                mult_yields_sections_in_docstr_msg(founds.join(",").as_str()),
             ));
         }
     }
@@ -353,7 +438,7 @@ fn check_functions_for_multiple_returns_section(
             problem_functions.push(format_problem(
                 line,
                 line_location,
-                mult_returns_sections_in_docstr_msg(founds.join(",").to_string()),
+                mult_returns_sections_in_docstr_msg(founds.join(",").as_str()),
             ));
         }
     }
@@ -748,6 +833,12 @@ fn generate_rules_output(
         file_contents,
         is_test_file,
     ));
+    // DC024: argument should not be described in the docstring
+    problem_functions.extend(check_functions_for_extra_arg_in_args_section(
+        &things.function_infos,
+        file_contents,
+        is_test_file,
+    ));
 
     for class_info in &things.class_infos {
         problem_functions.extend(check_functions_for_missing_docstring(
@@ -801,6 +892,11 @@ fn generate_rules_output(
             is_test_file,
         ));
         problem_functions.extend(check_functions_for_missing_arg_in_args_section(
+            &class_info.funcs,
+            file_contents,
+            is_test_file,
+        ));
+        problem_functions.extend(check_functions_for_extra_arg_in_args_section(
             &class_info.funcs,
             file_contents,
             is_test_file,

@@ -40,7 +40,7 @@ pub fn args_section_in_docstr_msg() -> String {
 pub fn mult_args_sections_in_docstr_code() -> String {
     format!("{}022", ERROR_CODE_PREFIX)
 }
-pub fn mult_args_sections_in_docstr_msg(found: String) -> String {
+pub fn mult_args_sections_in_docstr_msg(found: &str) -> String {
     format!(
         "{} a docstring should only contain a single arguments section, found {}{}{}",
         mult_args_sections_in_docstr_code(),
@@ -61,6 +61,20 @@ pub fn arg_not_in_docstr_msg(_arg: &str) -> String {
         arg_not_in_docstr_code().to_lowercase()
     )
 }
+
+pub fn arg_in_docstr_code() -> String {
+    format!("{}024", ERROR_CODE_PREFIX)
+}
+pub fn arg_in_docstr_msg(_arg: &str) -> String {
+    format!(
+        "{} \"{}\" argument should not be described in the docstring{}{}",
+        arg_in_docstr_code(),
+        _arg,
+        MORE_INFO_BASE,
+        arg_in_docstr_code().to_lowercase()
+    )
+}
+
 pub fn returns_section_not_in_docstr_code() -> String {
     format!("{}030", ERROR_CODE_PREFIX)
 }
@@ -89,7 +103,7 @@ pub fn returns_section_in_docstr_msg() -> String {
 pub fn mult_returns_sections_in_docstr_code() -> String {
     format!("{}032", ERROR_CODE_PREFIX)
 }
-pub fn mult_returns_sections_in_docstr_msg(found: String) -> String {
+pub fn mult_returns_sections_in_docstr_msg(found: &str) -> String {
     format!(
         "{} a docstring should only contain a single returns section, found {}{}{}",
         mult_returns_sections_in_docstr_code(),
@@ -126,7 +140,7 @@ pub fn yields_section_in_docstr_msg() -> String {
 pub fn mult_yields_sections_in_docstr_code() -> String {
     format!("{}042", ERROR_CODE_PREFIX)
 }
-pub fn mult_yields_sections_in_docstr_msg(found: String) -> String {
+pub fn mult_yields_sections_in_docstr_msg(found: &str) -> String {
     format!(
         "{} a docstring should only contain a single yields section, found {}{}{}",
         mult_yields_sections_in_docstr_code(),
