@@ -1,14 +1,17 @@
 use crate::constants::{
     arg_in_docstr_msg, arg_not_in_docstr_msg, args_section_in_docstr_msg,
-    args_section_not_in_docstr_msg, docstr_missing_msg, mult_args_sections_in_docstr_msg,
-    mult_returns_sections_in_docstr_msg, mult_yields_sections_in_docstr_msg,
-    returns_section_in_docstr_msg, returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
+    args_section_not_in_docstr_msg, docstr_missing_msg, duplicate_arg_msg,
+    mult_args_sections_in_docstr_msg, mult_returns_sections_in_docstr_msg,
+    mult_yields_sections_in_docstr_msg, returns_section_in_docstr_msg,
+    returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
     yields_section_not_in_docstr_msg,
 };
 use crate::plugin::{get_result, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind};
 use pyo3::prelude::*;
 use rustpython_ast::text_size::TextRange;
 use rustpython_ast::{Arguments, Expr, ExprAttribute, ExprCall, StmtReturn};
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs;
 
 fn read_file(file_name: &str) -> String {
@@ -110,6 +113,66 @@ fn find_line_and_column(s: &str, char_index: usize) -> Option<(usize, usize)> {
 fn format_problem(line: usize, line_location: usize, error_msg: String) -> String {
     format!("{}:{} {}", line, line_location, error_msg)
 }
+fn check_functions_for_duplicate_arg_in_args_section(
+    function_infos: &Vec<FunctionInfo>,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut problem_functions: Vec<String> = Vec::new();
+
+    for function in function_infos {
+        if should_skip(function, is_test_file) {
+            continue;
+        }
+
+        // ignore if function doesn't have docstrings
+        if function.docstring.is_none() {
+            continue;
+        }
+
+        let args = function.def.args();
+        let clean_args = cleanse_args(args, false);
+        // ignore if function doesn't have args
+        if is_args_empty(&clean_args) {
+            continue;
+        }
+
+        let docstring_args_sections = function.docstring.clone().unwrap().get_args_sections();
+        let docstring_args = function.docstring.clone().unwrap().get_args();
+
+        println!("{}", function.docstring.clone().unwrap().__repr__());
+        if docstring_args_sections.is_empty() {
+            continue;
+        }
+        println!("docstring_args: {:?}", docstring_args);
+        let mut counts = HashMap::new();
+
+        let mut _range = function
+            .docstring
+            .clone()
+            .expect("This should not happen")
+            .get_range();
+        for arg_name in docstring_args {
+            let counter = counts.entry(arg_name.clone()).or_insert(0);
+            *counter += 1;
+            if *counter == 2 {
+                let args_lines = find_string_in_text_range(
+                    file_contents,
+                    &_range,
+                    vec!["args", "arguments", "parameters"],
+                );
+                let (line, line_location, _) = args_lines.first().unwrap().to_owned();
+                problem_functions.push(format_problem(
+                    line,
+                    line_location,
+                    duplicate_arg_msg(arg_name.as_str()),
+                ));
+            }
+        }
+    }
+
+    problem_functions
+}
 
 fn check_functions_for_extra_arg_in_args_section(
     function_infos: &Vec<FunctionInfo>,
@@ -129,7 +192,7 @@ fn check_functions_for_extra_arg_in_args_section(
         }
 
         let args = function.def.args();
-        let clean_args = cleanse_args(args);
+        let clean_args = cleanse_args(args, true);
         // ignore if function doesn't have args
         if is_args_empty(&clean_args) {
             continue;
@@ -213,7 +276,7 @@ fn check_functions_for_missing_arg_in_args_section(
         }
 
         let args = function.def.args();
-        let clean_args = cleanse_args(args);
+        let clean_args = cleanse_args(args, true);
         // ignore if function doesn't have args
         if is_args_empty(&clean_args) {
             continue;
@@ -325,7 +388,7 @@ fn check_functions_for_multiple_args_section(
         }
 
         let args = function.def.args();
-        let clean_args = cleanse_args(args);
+        let clean_args = cleanse_args(args, true);
         // ignore if function doesn't have args
         if is_args_empty(&clean_args) {
             continue;
@@ -463,21 +526,21 @@ fn check_functions_for_extra_args_section(
         }
 
         let args = function.def.args();
-        let clean_args = cleanse_args(args);
+        let clean_args = cleanse_args(args, true);
         if !is_args_empty(&clean_args) {
             continue;
         }
-
-        let _range = function.def.range();
-        // let doc_loc = find_string_in_text_range(file_contents, _range, vec!["\"\"\""]);
-        // let (line, line_location, _) = doc_loc.first().unwrap().to_owned();
+        if function.docstring.clone().unwrap().has_args() {
+            continue;
+        }
 
         if function.docstring.clone().unwrap().has_args_sections() {
-            let mut _range = function.def.range();
-            let args_lines = find_string_in_text_range(file_contents, _range, vec!["Args:"]);
+            let mut _range = function.docstring.clone().unwrap().get_range();
+            let args_lines = find_string_in_text_range(file_contents, &_range, vec!["Args:"]);
             if args_lines.is_empty() {
                 continue;
             }
+
             for (line, line_location, _) in args_lines {
                 problem_functions.push(format_problem(
                     line,
@@ -491,14 +554,14 @@ fn check_functions_for_extra_args_section(
     problem_functions
 }
 
-fn cleanse_args(args: &Arguments) -> Arguments {
+fn cleanse_args(args: &Arguments, del_private_args: bool) -> Arguments {
     let mut clean_args: Arguments = args.clone();
     for (index, arg) in args.args.iter().enumerate() {
         let arg_name = arg.def.arg.trim();
         if arg_name == "self" {
             clean_args.args.remove(index);
         }
-        if arg_name.starts_with("_") {
+        if del_private_args && arg_name.starts_with("_") {
             clean_args.args.remove(index);
         }
     }
@@ -508,7 +571,7 @@ fn cleanse_args(args: &Arguments) -> Arguments {
         if arg_name == "self" {
             clean_args.kwonlyargs.remove(index);
         }
-        if arg_name.starts_with("_") {
+        if del_private_args && arg_name.starts_with("_") {
             clean_args.kwonlyargs.remove(index);
         }
     }
@@ -517,7 +580,7 @@ fn cleanse_args(args: &Arguments) -> Arguments {
         if arg_name == "self" {
             clean_args.posonlyargs.remove(index);
         }
-        if arg_name.starts_with("_") {
+        if del_private_args && arg_name.starts_with("_") {
             clean_args.posonlyargs.remove(index);
         }
     }
@@ -677,7 +740,7 @@ fn check_functions_for_missing_args_section(
         }
         // ignore if function doesn't have args
         let args = function.def.args();
-        let clean_args = cleanse_args(args);
+        let clean_args = cleanse_args(args, true);
 
         if is_args_empty(&clean_args) {
             continue;
@@ -839,6 +902,12 @@ fn generate_rules_output(
         file_contents,
         is_test_file,
     ));
+    // DC025: argument documented multiple times
+    problem_functions.extend(check_functions_for_duplicate_arg_in_args_section(
+        &things.function_infos,
+        file_contents,
+        is_test_file,
+    ));
 
     for class_info in &things.class_infos {
         problem_functions.extend(check_functions_for_missing_docstring(
@@ -897,6 +966,11 @@ fn generate_rules_output(
             is_test_file,
         ));
         problem_functions.extend(check_functions_for_extra_arg_in_args_section(
+            &class_info.funcs,
+            file_contents,
+            is_test_file,
+        ));
+        problem_functions.extend(check_functions_for_duplicate_arg_in_args_section(
             &class_info.funcs,
             file_contents,
             is_test_file,

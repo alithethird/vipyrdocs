@@ -1,6 +1,9 @@
 use pyo3::prelude::*;
 
 use regex::Regex;
+use rustpython_ast::text_size::TextRange;
+use rustpython_ast::ExprConstant;
+use rustpython_ast::TextSize;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
@@ -73,21 +76,10 @@ pub struct Docstring {
     yields_sections: Option<Vec<String>>,
     raises: Option<Vec<String>>,
     raises_sections: Option<Vec<String>>,
+    range: TextRange,
 }
 
-#[pymethods]
 impl Docstring {
-    #[new]
-    #[pyo3(signature = (
-    args=None,
-    args_sections=None,
-    attrs=None,
-    attrs_sections=None,
-    returns_sections=None,
-    yields_sections=None,
-    raises=None,
-    raises_sections=None
-    ))]
     fn new(
         args: Option<Vec<String>>,
         args_sections: Option<Vec<String>>,
@@ -97,6 +89,7 @@ impl Docstring {
         yields_sections: Option<Vec<String>>,
         raises: Option<Vec<String>>,
         raises_sections: Option<Vec<String>>,
+        range: TextRange,
     ) -> Self {
         Docstring {
             args,
@@ -107,6 +100,7 @@ impl Docstring {
             yields_sections,
             raises,
             raises_sections,
+            range,
         }
     }
 
@@ -128,7 +122,7 @@ impl Docstring {
     }
     pub fn __repr__(&self) -> String {
         format!(
-        "Docstring(\n  args={:?},\n  args_sections={:?},\n  attrs={:?},\n  attrs_sections={:?},\n  returns_sections={:?},\n  yields_sections={:?},\n  raises={:?},\n  raises_sections={:?}\n)",
+        "Docstring(\n  args={:?},\n  args_sections={:?},\n  attrs={:?},\n  attrs_sections={:?},\n  returns_sections={:?},\n  yields_sections={:?},\n  raises={:?},\n  raises_sections={:?},\n range={:?})",
         self.args,
         self.args_sections,
         self.attrs,
@@ -137,6 +131,7 @@ impl Docstring {
         self.yields_sections,
         self.raises,
         self.raises_sections,
+        self.range,
     )
     }
 
@@ -215,6 +210,9 @@ impl Docstring {
             return Vec::<String>::new();
         }
         self.args.clone().unwrap()
+    }
+    pub fn get_range(&self) -> TextRange {
+        self.range
     }
 }
 
@@ -303,8 +301,8 @@ fn _get_all_section_names_by_name<'a>(name: &str, sections: &'a [_Section]) -> O
     Some(all_section_names)
 }
 
-#[pyfunction]
-pub fn parse(value: String) -> Docstring {
+pub fn parse(constant_expr: &ExprConstant) -> Docstring {
+    let value = constant_expr.clone().value.expect_str();
     let sections = _get_sections(value.lines().map(|line| line.to_string()).collect());
 
     let args_section = _get_section_by_name("args", &sections);
@@ -320,11 +318,22 @@ pub fn parse(value: String) -> Docstring {
         _get_all_section_names_by_name("yields", &sections),
         raises_section.map(|s| s.subs.clone()),
         _get_all_section_names_by_name("raises", &sections),
+        constant_expr.range,
     )
 }
 
 fn empty_docstring() -> Docstring {
-    Docstring::new(None, None, None, None, None, None, None, None)
+    Docstring::new(
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        TextRange::new(TextSize::from(0), TextSize::from(0)),
+    )
 }
 ////////// Tests
 
@@ -336,47 +345,6 @@ struct TestInput {
 struct TestParseInput {
     input: String,
     expected: Docstring,
-}
-
-#[test]
-pub fn test_parse() {
-    let test_inputs = [
-        TestParseInput {
-            input: "".to_string(),
-            expected: empty_docstring(),
-        },
-        TestParseInput {
-            input: "short description
-
-# Args:
-#     arg_1:
-#     arg_2:
-#     "
-                .to_string(),
-            expected: Docstring {
-                args: Some(vec!["arg_1".to_string(), "arg_2".to_string()]),
-                args_sections: Some(vec!["Args".to_string()]),
-                attrs: None,
-                attrs_sections: None,
-                returns_sections: None,
-                yields_sections: None,
-                raises: None,
-                raises_sections: None,
-            },
-        },
-    ];
-
-    for input in test_inputs.iter() {
-        let returned_docstring = parse(input.input.clone());
-
-        println!("Input: {:?}", input.input);
-        println!(
-            "Returned: {:?}\nExpected: {:?}\n\n\n",
-            returned_docstring, input.expected
-        );
-
-        assert_eq!(returned_docstring, input.expected);
-    }
 }
 
 #[test]

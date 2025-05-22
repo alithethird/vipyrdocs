@@ -75,6 +75,18 @@ pub fn arg_in_docstr_msg(_arg: &str) -> String {
     )
 }
 
+pub fn duplicate_arg_in_docstr_code() -> String {
+    format!("{}024", ERROR_CODE_PREFIX)
+}
+pub fn duplicate_arg_msg(_arg: &str) -> String {
+    format!(
+        "{} \"{}\" argument documented multiple times{}{}",
+        duplicate_arg_in_docstr_code(),
+        _arg,
+        MORE_INFO_BASE,
+        duplicate_arg_in_docstr_code().to_lowercase()
+    )
+}
 pub fn returns_section_not_in_docstr_code() -> String {
     format!("{}030", ERROR_CODE_PREFIX)
 }
