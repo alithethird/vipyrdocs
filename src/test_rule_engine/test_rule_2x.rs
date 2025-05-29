@@ -14,7 +14,6 @@ fn general_test(code: &str, expected: Vec<String>) {
     }
 }
 
-
 #[test]
 fn test_rule_2x_function_single_arg_docstring_single_arg() {
     let code = r#"
@@ -210,7 +209,6 @@ def function_1(arg_1, _arg_2):
     let expected = vec![];
     general_test(code, expected);
 }
-
 
 #[test]
 fn test_rule_2x_method_single_arg_docstring_single_arg() {

@@ -161,3 +161,15 @@ pub fn mult_yields_sections_in_docstr_msg(found: &str) -> String {
         mult_yields_sections_in_docstr_code().to_lowercase()
     )
 }
+
+pub fn raises_section_not_in_docstr_code() -> String {
+    format!("{}050", ERROR_CODE_PREFIX)
+}
+pub fn raises_section_not_in_docstr_msg() -> String {
+    format!(
+        "{} function/ method that raises an exception should have the raises section in the docstring {}{}",
+        raises_section_not_in_docstr_code(),
+        MORE_INFO_BASE,
+        raises_section_not_in_docstr_code().to_lowercase()
+    )
+}
