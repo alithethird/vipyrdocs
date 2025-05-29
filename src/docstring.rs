@@ -322,19 +322,6 @@ pub fn parse(constant_expr: &ExprConstant) -> Docstring {
     )
 }
 
-fn empty_docstring() -> Docstring {
-    Docstring::new(
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        TextRange::new(TextSize::from(0), TextSize::from(0)),
-    )
-}
 ////////// Tests
 
 struct TestInput {

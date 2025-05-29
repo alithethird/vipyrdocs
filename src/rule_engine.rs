@@ -11,7 +11,6 @@ use pyo3::prelude::*;
 use rustpython_ast::text_size::TextRange;
 use rustpython_ast::{Arguments, Expr, ExprAttribute, ExprCall, StmtReturn};
 use std::collections::HashMap;
-use std::collections::HashSet;
 use std::fs;
 
 fn read_file(file_name: &str) -> String {
