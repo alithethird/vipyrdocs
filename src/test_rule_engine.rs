@@ -5,6 +5,7 @@ mod test_rule_22;
 mod test_rule_23;
 mod test_rule_24;
 mod test_rule_25;
+mod test_rule_2x;
 mod test_rule_40;
 mod test_rule_41;
 mod test_rule_42;
