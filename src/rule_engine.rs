@@ -555,9 +555,30 @@ fn check_functions_for_extra_args_section(
 
 fn cleanse_args(args: &Arguments, del_private_args: bool) -> Arguments {
     let mut clean_args: Arguments = args.clone();
+    if args.vararg.is_some() {
+        let arg_name = args.vararg.clone().unwrap().arg.trim().to_owned();
+        if arg_name == "self" {
+            clean_args.vararg = None;
+        }
+        if arg_name == "cls" {
+            clean_args.vararg = None;
+        }
+        if del_private_args && arg_name.starts_with("_") {
+            clean_args.vararg = None;
+        }
+    }
+    if args.kwarg.is_some() {
+        let arg_name = args.kwarg.clone().unwrap().arg.trim().to_owned();
+        if del_private_args && arg_name.starts_with("_") {
+            clean_args.kwarg = None;
+        }
+    }
     for (index, arg) in args.args.iter().enumerate() {
         let arg_name = arg.def.arg.trim();
         if arg_name == "self" {
+            clean_args.args.remove(index);
+        }
+        if arg_name == "cls" {
             clean_args.args.remove(index);
         }
         if del_private_args && arg_name.starts_with("_") {
@@ -567,9 +588,6 @@ fn cleanse_args(args: &Arguments, del_private_args: bool) -> Arguments {
 
     for (index, arg) in args.kwonlyargs.iter().enumerate() {
         let arg_name = arg.def.arg.trim();
-        if arg_name == "self" {
-            clean_args.kwonlyargs.remove(index);
-        }
         if del_private_args && arg_name.starts_with("_") {
             clean_args.kwonlyargs.remove(index);
         }
@@ -577,6 +595,9 @@ fn cleanse_args(args: &Arguments, del_private_args: bool) -> Arguments {
     for (index, arg) in args.posonlyargs.iter().enumerate() {
         let arg_name = arg.def.arg.trim();
         if arg_name == "self" {
+            clean_args.posonlyargs.remove(index);
+        }
+        if arg_name == "cls" {
             clean_args.posonlyargs.remove(index);
         }
         if del_private_args && arg_name.starts_with("_") {
