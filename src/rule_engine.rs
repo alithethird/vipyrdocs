@@ -1,9 +1,9 @@
 use crate::constants::{
-    raises_section_not_in_docstr_msg,
     arg_in_docstr_msg, arg_not_in_docstr_msg, args_section_in_docstr_msg,
     args_section_not_in_docstr_msg, docstr_missing_msg, duplicate_arg_msg,
     mult_args_sections_in_docstr_msg, mult_returns_sections_in_docstr_msg,
-    mult_yields_sections_in_docstr_msg, returns_section_in_docstr_msg,
+    mult_yields_sections_in_docstr_msg, raises_section_in_docstr_msg,
+    raises_section_not_in_docstr_msg, returns_section_in_docstr_msg,
     returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
     yields_section_not_in_docstr_msg,
 };
@@ -648,6 +648,47 @@ fn check_functions_for_extra_yields_section(
 
     problem_functions
 }
+
+fn check_functions_for_extra_raises_section(
+    function_infos: &Vec<FunctionInfo>,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut problem_functions: Vec<String> = Vec::new();
+
+    for function in function_infos {
+        if should_skip_dont_skip_private(function, is_test_file) {
+            continue;
+        }
+        // ignore if function doesn't have docstrings
+        if function.docstring.is_none() {
+            continue;
+        }
+
+        let raise_statements: &Vec<StmtRaise> = &function.raises;
+
+        if ((raise_statements.len() == 1 && raise_statements.first().unwrap().exc.is_none())
+            || raise_statements.is_empty())
+            && function.docstring.clone().unwrap().has_raises()
+        {
+            let mut _range = function.def.range();
+            let raise_lines =
+                find_string_in_text_range(file_contents, _range, vec!["Raise:", "Raises:"]);
+            if raise_lines.is_empty() {
+                continue;
+            }
+            for (line, line_location, _) in raise_lines {
+                problem_functions.push(format_problem(
+                    line,
+                    line_location,
+                    raises_section_in_docstr_msg(),
+                ));
+            }
+        }
+    }
+
+    problem_functions
+}
 fn check_functions_for_extra_returns_section(
     function_infos: &Vec<FunctionInfo>,
     file_contents: &str,
@@ -716,7 +757,7 @@ fn check_functions_for_missing_raises_section(
                     let (line, line_location) =
                         find_line_and_column(file_contents, _range.start().to_usize()).unwrap();
                     problem_functions.push(format_problem(
-                        line -1,
+                        line - 1,
                         line_location,
                         raises_section_not_in_docstr_msg(),
                     ));
@@ -969,10 +1010,16 @@ fn generate_rules_output(
         file_contents,
         is_test_file,
     ));
-
     // DC050: function/ method that raises a value should have the
     // raises section in the docstring
     problem_functions.extend(check_functions_for_missing_raises_section(
+        &things.function_infos,
+        file_contents,
+        is_test_file,
+    ));
+    // DC051: function/ method that does not raise a value should not
+    // have the raises section in the docstring
+    problem_functions.extend(check_functions_for_extra_raises_section(
         &things.function_infos,
         file_contents,
         is_test_file,
@@ -1044,6 +1091,11 @@ fn generate_rules_output(
             is_test_file,
         ));
         problem_functions.extend(check_functions_for_missing_raises_section(
+            &class_info.funcs,
+            file_contents,
+            is_test_file,
+        ));
+        problem_functions.extend(check_functions_for_extra_raises_section(
             &class_info.funcs,
             file_contents,
             is_test_file,
