@@ -57,7 +57,7 @@ Outputs any functions/classes missing docstrings or having incomplete ones.
 - 👌 DCO042: function/ method that yields a value and the docstring has multiple yields sections.
 - 👌 DCO050: function/ method raises one or more exceptions and the docstring does not have a raises section.
 - 👌 DCO051: function/ method that raises no exceptions and the docstring has a raises section.
-- 🙅 DCO052: function/ method that raises one or more exceptions and the docstring has multiple raises sections.
+- 👌 DCO052: function/ method that raises one or more exceptions and the docstring has multiple raises sections.
 - 🙅 DCO053: function/ method that raises one or more exceptions where one or more of the exceptions is not described in the docstring.
 - 🙅 DCO054: function/ method has one or more exceptions described in the docstring which are not raised in the function/ method.
 - 🙅 DCO055: function/ method that has a raise without an exception has an empty raises section in the docstring.
