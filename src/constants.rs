@@ -167,7 +167,7 @@ pub fn raises_section_not_in_docstr_code() -> String {
 }
 pub fn raises_section_not_in_docstr_msg() -> String {
     format!(
-        "{} function/ method that raises an exception should have the raises section in the docstring {}{}",
+        "{} a function/ method that raises an exception should have the raises section in the docstring {}{}",
         raises_section_not_in_docstr_code(),
         MORE_INFO_BASE,
         raises_section_not_in_docstr_code().to_lowercase()
