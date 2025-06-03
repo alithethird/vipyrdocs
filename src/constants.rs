@@ -174,7 +174,7 @@ pub fn raises_section_not_in_docstr_msg() -> String {
     )
 }
 pub fn raises_section_in_docstr_code() -> String {
-    format!("{}050", ERROR_CODE_PREFIX)
+    format!("{}051", ERROR_CODE_PREFIX)
 }
 pub fn raises_section_in_docstr_msg() -> String {
     format!(
@@ -182,5 +182,18 @@ pub fn raises_section_in_docstr_msg() -> String {
         raises_section_in_docstr_code(),
         MORE_INFO_BASE,
         raises_section_in_docstr_code().to_lowercase()
+    )
+}
+
+pub fn mult_raises_sections_in_docstr_code() -> String {
+    format!("{}052", ERROR_CODE_PREFIX)
+}
+pub fn mult_raises_sections_in_docstr_msg(found: &str) -> String {
+    format!(
+        "{} a docstring should only contain a single raises section, found {}{}{}",
+        mult_raises_sections_in_docstr_code(),
+        found,
+        MORE_INFO_BASE,
+        mult_raises_sections_in_docstr_code().to_lowercase()
     )
 }

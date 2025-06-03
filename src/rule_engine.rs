@@ -1,9 +1,9 @@
 use crate::constants::{
     arg_in_docstr_msg, arg_not_in_docstr_msg, args_section_in_docstr_msg,
     args_section_not_in_docstr_msg, docstr_missing_msg, duplicate_arg_msg,
-    mult_args_sections_in_docstr_msg, mult_returns_sections_in_docstr_msg,
-    mult_yields_sections_in_docstr_msg, raises_section_in_docstr_msg,
-    raises_section_not_in_docstr_msg, returns_section_in_docstr_msg,
+    mult_args_sections_in_docstr_msg, mult_raises_sections_in_docstr_msg,
+    mult_returns_sections_in_docstr_msg, mult_yields_sections_in_docstr_msg,
+    raises_section_in_docstr_msg, raises_section_not_in_docstr_msg, returns_section_in_docstr_msg,
     returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
     yields_section_not_in_docstr_msg,
 };
@@ -69,28 +69,42 @@ pub fn find_string_in_text_range(
 
     let sub = &s[start..end].to_lowercase();
     let mut positions: Vec<(usize, usize, String)> = Vec::new();
+    let target_strings_lower: Vec<String> =
+        target_strings.iter().map(|t| t.to_lowercase()).collect();
 
-    for target in target_strings {
-        let mut offset = 0;
-        while let Some(pos) = sub[offset..].find(&target.to_lowercase()) {
-            let absolute_pos = start + offset + pos;
+    let mut offset = 0;
+    while offset < sub.len() {
+        let mut matched = false;
+        for (i, target) in target_strings_lower.iter().enumerate() {
+            if sub[offset..].starts_with(target) {
+                let absolute_pos = start + offset;
 
-            // Find line and column
-            let before = &s[..absolute_pos];
-            let line_number = before.lines().count(); // 1-based
+                let before = &s[..absolute_pos];
+                let line_number = before.lines().count(); // 1-based
 
-            let column_number = before
-                .rfind('\n')
-                .map(|idx| absolute_pos - idx - 1)
-                .unwrap_or(absolute_pos);
+                let column_number = before
+                    .rfind('\n')
+                    .map(|idx| absolute_pos - idx - 1)
+                    .unwrap_or(absolute_pos);
 
-            positions.push((line_number - 2, column_number, target.to_string())); // line_number -2 to make it 0-based and not count """
-            offset += pos + 1; // Move past the current match
+                positions.push((
+                    line_number - 2,
+                    column_number,
+                    target_strings[i].to_string(),
+                ));
+                offset += target.len();
+                matched = true;
+                break; // only take the first match at this position
+            }
+        }
+        if !matched {
+            offset += 1;
         }
     }
 
     positions
 }
+
 fn find_line_and_column(s: &str, char_index: usize) -> Option<(usize, usize)> {
     let mut current_char_index = 0;
 
@@ -462,6 +476,46 @@ fn check_functions_for_multiple_yields_section(
                 line,
                 line_location,
                 mult_yields_sections_in_docstr_msg(founds.join(",").as_str()),
+            ));
+        }
+    }
+
+    problem_functions
+}
+fn check_functions_for_multiple_raises_section(
+    function_infos: &Vec<FunctionInfo>,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut problem_functions: Vec<String> = Vec::new();
+
+    for function in function_infos {
+        if should_skip(function, is_test_file) {
+            continue;
+        }
+
+        // ignore if function doesn't have docstrings
+        if function.docstring.is_none() {
+            continue;
+        }
+
+        if function.docstring.clone().unwrap().get_raises().len() > 1 {
+            let mut _range = &function.docstring.clone().unwrap().get_range();
+            let raise_lines =
+                find_string_in_text_range(file_contents, _range, vec!["Raises:", "Raise:"]);
+            if raise_lines.len() < 2 {
+                continue;
+            }
+            let mut founds: Vec<String> = Vec::new();
+            for (_, _, found) in &raise_lines {
+                // the latest char is a : which we do not want
+                founds.push(found[..found.len() - 1].to_string());
+            }
+            let (line, line_location, _) = raise_lines.first().unwrap().to_owned();
+            problem_functions.push(format_problem(
+                line,
+                line_location,
+                mult_raises_sections_in_docstr_msg(founds.join(",").as_str()),
             ));
         }
     }
@@ -1024,6 +1078,13 @@ fn generate_rules_output(
         file_contents,
         is_test_file,
     ));
+    // DC052: a docstring should only contain a single raises
+    // section, found %s
+    problem_functions.extend(check_functions_for_multiple_raises_section(
+        &things.function_infos,
+        file_contents,
+        is_test_file,
+    ));
     for class_info in &things.class_infos {
         problem_functions.extend(check_functions_for_missing_docstring(
             &class_info.funcs,
@@ -1096,6 +1157,11 @@ fn generate_rules_output(
             is_test_file,
         ));
         problem_functions.extend(check_functions_for_extra_raises_section(
+            &class_info.funcs,
+            file_contents,
+            is_test_file,
+        ));
+        problem_functions.extend(check_functions_for_multiple_raises_section(
             &class_info.funcs,
             file_contents,
             is_test_file,
