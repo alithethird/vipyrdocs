@@ -1,4 +1,5 @@
 use crate::constants::{
+    raises_section_not_in_docstr_msg,
     arg_in_docstr_msg, arg_not_in_docstr_msg, args_section_in_docstr_msg,
     args_section_not_in_docstr_msg, docstr_missing_msg, duplicate_arg_msg,
     mult_args_sections_in_docstr_msg, mult_returns_sections_in_docstr_msg,
@@ -9,7 +10,7 @@ use crate::constants::{
 use crate::plugin::{get_result, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind};
 use pyo3::prelude::*;
 use rustpython_ast::text_size::TextRange;
-use rustpython_ast::{Arguments, Expr, ExprAttribute, ExprCall, StmtReturn};
+use rustpython_ast::{Arguments, Expr, ExprAttribute, ExprCall, StmtRaise, StmtReturn};
 use std::collections::HashMap;
 use std::fs;
 
@@ -687,6 +688,46 @@ fn check_functions_for_extra_returns_section(
     problem_functions
 }
 
+fn check_functions_for_missing_raises_section(
+    function_infos: &Vec<FunctionInfo>,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut problem_functions: Vec<String> = Vec::new();
+
+    for function in function_infos {
+        if should_skip(function, is_test_file) {
+            continue;
+        }
+        // ignore if function doesn't have returns
+        let raise_statements: &Vec<StmtRaise> = &function.raises;
+        if raise_statements.is_empty() {
+            continue;
+        }
+        if function.docstring.is_none() {
+            continue;
+        }
+
+        if !function.docstring.clone().unwrap().has_raises() {
+            for ret in raise_statements {
+                if ret.exc.is_some() {
+                    let _range = &ret.range;
+
+                    let (line, line_location) =
+                        find_line_and_column(file_contents, _range.start().to_usize()).unwrap();
+                    problem_functions.push(format_problem(
+                        line -1,
+                        line_location,
+                        raises_section_not_in_docstr_msg(),
+                    ));
+                }
+            }
+        }
+    }
+
+    problem_functions
+}
+
 fn check_functions_for_missing_yields_section(
     function_infos: &Vec<FunctionInfo>,
     file_contents: &str,
@@ -929,6 +970,13 @@ fn generate_rules_output(
         is_test_file,
     ));
 
+    // DC050: function/ method that raises a value should have the
+    // raises section in the docstring
+    problem_functions.extend(check_functions_for_missing_raises_section(
+        &things.function_infos,
+        file_contents,
+        is_test_file,
+    ));
     for class_info in &things.class_infos {
         problem_functions.extend(check_functions_for_missing_docstring(
             &class_info.funcs,
@@ -991,6 +1039,11 @@ fn generate_rules_output(
             is_test_file,
         ));
         problem_functions.extend(check_functions_for_duplicate_arg_in_args_section(
+            &class_info.funcs,
+            file_contents,
+            is_test_file,
+        ));
+        problem_functions.extend(check_functions_for_missing_raises_section(
             &class_info.funcs,
             file_contents,
             is_test_file,

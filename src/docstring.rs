@@ -166,6 +166,22 @@ impl Docstring {
         self.returns_sections.clone().unwrap()
     }
 
+    pub fn has_raises(&self) -> bool {
+        if self.raises_sections.is_none() {
+            return false;
+        }
+        if self.raises_sections.clone().unwrap().is_empty() {
+            return false;
+        }
+        true
+    }
+    pub fn get_raises(&self) -> Vec<String> {
+        if self.raises_sections.is_none() {
+            return Vec::<String>::new();
+        }
+        self.raises_sections.clone().unwrap()
+    }
+
     pub fn has_yields(&self) -> bool {
         if self.yields_sections.is_none() {
             return false;
