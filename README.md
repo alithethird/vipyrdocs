@@ -49,14 +49,14 @@ Outputs any functions/classes missing docstrings or having incomplete ones.
 - 👌 DCO023: function/ method has one or more arguments not described in the docstring.
 - 👌 DCO024: function/ method has one or more arguments described in the docstring which are not arguments of the function/ method.
 - 👌 DCO025: function/ method has one or more arguments described in the docstring multiple times.
-- 👌DCO030: function/ method that returns a value does not have the returns section in the docstring.
-- 👌DCO031: function/ method that does not return a value has the returns section in the docstring.
-- 👌DCO032: function/ method that returns a value and the docstring has multiple returns sections.
-- 👌DCO040: function/ method that yields a value does not have the yields section in the docstring.
-- 👌DCO041: function/ method that does not yield a value has the yields section in the docstring.
-- 👌DCO042: function/ method that yields a value and the docstring has multiple yields sections.
-- 🙅 DCO050: function/ method raises one or more exceptions and the docstring does not have a raises section.
-- 🙅 DCO051: function/ method that raises no exceptions and the docstring has a raises section.
+- 👌 DCO030: function/ method that returns a value does not have the returns section in the docstring.
+- 👌 DCO031: function/ method that does not return a value has the returns section in the docstring.
+- 👌 DCO032: function/ method that returns a value and the docstring has multiple returns sections.
+- 👌 DCO040: function/ method that yields a value does not have the yields section in the docstring.
+- 👌 DCO041: function/ method that does not yield a value has the yields section in the docstring.
+- 👌 DCO042: function/ method that yields a value and the docstring has multiple yields sections.
+- 👌 DCO050: function/ method raises one or more exceptions and the docstring does not have a raises section.
+- 👌 DCO051: function/ method that raises no exceptions and the docstring has a raises section.
 - 🙅 DCO052: function/ method that raises one or more exceptions and the docstring has multiple raises sections.
 - 🙅 DCO053: function/ method that raises one or more exceptions where one or more of the exceptions is not described in the docstring.
 - 🙅 DCO054: function/ method has one or more exceptions described in the docstring which are not raised in the function/ method.
