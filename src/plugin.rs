@@ -3,7 +3,7 @@ use crate::docstring::Docstring;
 use rustpython_ast::text_size::TextRange;
 use rustpython_ast::{
     Arguments, ExprYield, ExprYieldFrom, Stmt, StmtAsyncFunctionDef, StmtClassDef, StmtFunctionDef,
-    StmtReturn, Visitor,
+    StmtRaise, StmtReturn, Visitor,
 };
 use rustpython_parser::{parse, Mode};
 
@@ -99,6 +99,7 @@ pub struct FunctionInfo {
     pub def: FunctionDefKind,
     pub returns: Vec<StmtReturn>,
     pub yields: Vec<YieldKind>,
+    pub raises: Vec<StmtRaise>,
     pub docstring: Option<Docstring>,
 }
 //
@@ -144,16 +145,19 @@ fn get_func(expr: &FunctionDefKind) -> FunctionInfo {
 
     // Walk the function body to collect all return statements
     let mut return_collector = ReturnCollector::new();
+    let mut raise_collector = RaiseCollector::new();
 
     let mut yield_collector = YieldCollector::new();
     for stmt in expr.body() {
         return_collector.visit_stmt(stmt.clone());
+        raise_collector.visit_stmt(stmt.clone());
         yield_collector.visit_stmt(stmt.clone());
     }
 
     FunctionInfo {
         def: expr.clone(),
         returns: return_collector.returns,
+        raises: raise_collector.raises,
         yields: yield_collector.yields,
         docstring: function_docs,
     }
@@ -208,6 +212,54 @@ impl Visitor for YieldCollector {
     fn generic_visit_expr_yield_from(&mut self, node: ExprYieldFrom<TextRange>) {
         if self.func_depth == 0 && self.class_depth == 0 {
             self.yields.push(YieldKind::YieldFrom(node));
+        }
+    }
+}
+
+struct RaiseCollector {
+    pub raises: Vec<StmtRaise<TextRange>>,
+    func_depth: usize,
+    class_depth: usize,
+}
+
+impl RaiseCollector {
+    pub fn new() -> Self {
+        Self {
+            raises: Vec::new(),
+            func_depth: 0,
+            class_depth: 0,
+        }
+    }
+}
+
+impl Visitor for RaiseCollector {
+    fn visit_stmt_function_def(&mut self, node: StmtFunctionDef<TextRange>) {
+        self.func_depth += 1;
+        for stmt in &node.body {
+            self.visit_stmt(stmt.clone());
+        }
+        self.func_depth -= 1;
+    }
+
+    fn visit_stmt_async_function_def(&mut self, node: StmtAsyncFunctionDef<TextRange>) {
+        self.func_depth += 1;
+        for stmt in &node.body {
+            self.visit_stmt(stmt.clone());
+        }
+        self.func_depth -= 1;
+    }
+
+    fn visit_stmt_class_def(&mut self, node: StmtClassDef<TextRange>) {
+        self.class_depth += 1;
+        for stmt in &node.body {
+            self.visit_stmt(stmt.clone());
+        }
+        self.class_depth -= 1;
+    }
+
+    fn visit_stmt_raise(&mut self, node: StmtRaise<TextRange>) {
+        if self.func_depth == 0 && self.class_depth == 0 {
+            self.raises.push(node);
         }
     }
 }
