@@ -76,7 +76,7 @@ pub fn arg_in_docstr_msg(_arg: &str) -> String {
 }
 
 pub fn duplicate_arg_in_docstr_code() -> String {
-    format!("{}024", ERROR_CODE_PREFIX)
+    format!("{}025", ERROR_CODE_PREFIX)
 }
 pub fn duplicate_arg_msg(_arg: &str) -> String {
     format!(
@@ -195,5 +195,18 @@ pub fn mult_raises_sections_in_docstr_msg(found: &str) -> String {
         found,
         MORE_INFO_BASE,
         mult_raises_sections_in_docstr_code().to_lowercase()
+    )
+}
+
+pub fn exc_not_in_docstr_code() -> String {
+    format!("{}053", ERROR_CODE_PREFIX)
+}
+pub fn exc_not_in_docstr_msg(_raise: &str) -> String {
+    format!(
+        "{} \"{}\" exception should be described in the docstring{}{}",
+        exc_not_in_docstr_code(),
+        _raise,
+        MORE_INFO_BASE,
+        exc_not_in_docstr_code().to_lowercase()
     )
 }
