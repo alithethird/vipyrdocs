@@ -223,3 +223,15 @@ pub fn exc_in_docstr_msg(_raise: &str) -> String {
         exc_in_docstr_code().to_lowercase()
     )
 }
+
+pub fn re_raise_no_exc_in_docstr_code() -> String {
+    format!("{}055", ERROR_CODE_PREFIX)
+}
+pub fn re_raise_no_exc_in_docstr_msg() -> String {
+    format!(
+        "{} a function/ method that re-raises exceptions should describe at least one exception in the raises section of the docstring{}{}",
+        re_raise_no_exc_in_docstr_code(),
+        MORE_INFO_BASE,
+        re_raise_no_exc_in_docstr_code().to_lowercase()
+    )
+}
