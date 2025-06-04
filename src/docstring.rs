@@ -176,6 +176,12 @@ impl Docstring {
         true
     }
     pub fn get_raises(&self) -> Vec<String> {
+        if self.raises.is_none() {
+            return Vec::<String>::new();
+        }
+        self.raises.clone().unwrap()
+    }
+    pub fn get_raises_sections(&self) -> Vec<String> {
         if self.raises_sections.is_none() {
             return Vec::<String>::new();
         }
