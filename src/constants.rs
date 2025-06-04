@@ -210,3 +210,16 @@ pub fn exc_not_in_docstr_msg(_raise: &str) -> String {
         exc_not_in_docstr_code().to_lowercase()
     )
 }
+
+pub fn exc_in_docstr_code() -> String {
+    format!("{}054", ERROR_CODE_PREFIX)
+}
+pub fn exc_in_docstr_msg(_raise: &str) -> String {
+    format!(
+        "{} \"{}\" exception should not be described in the docstring{}{}",
+        exc_in_docstr_code(),
+        _raise,
+        MORE_INFO_BASE,
+        exc_in_docstr_code().to_lowercase()
+    )
+}
