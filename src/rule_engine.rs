@@ -1252,7 +1252,7 @@ fn generate_rules_output(
         file_contents,
         is_test_file,
     ));
-    // DC054: exception should npt be described in the docstring
+    // DC054: exception should not be described in the docstring
     problem_functions.extend(check_functions_for_extra_exc_in_raises_section(
         &things.function_infos,
         file_contents,
