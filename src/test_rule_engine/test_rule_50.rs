@@ -23,7 +23,7 @@ class Class1:
         """Docstring 1."""
         raise Exc1
 "#;
-    let expected: Vec<String> = vec![format!("5:8 {}", raises_section_not_in_docstr_msg())];
+    let expected: Vec<String> = vec![format!("6:8 {}", raises_section_not_in_docstr_msg())];
     general_test(code, expected);
 }
 
@@ -34,7 +34,7 @@ def function_1():
     """Docstring 1."""
     raise Exc1
 "#;
-    let expected: Vec<String> = vec![format!("3:4 {}", raises_section_not_in_docstr_msg())];
+    let expected: Vec<String> = vec![format!("4:4 {}", raises_section_not_in_docstr_msg())];
     general_test(code, expected);
 }
 
@@ -61,8 +61,8 @@ def function_2():
     raise Exc2
 "#;
     let expected: Vec<String> = vec![
-        format!("3:4 {}", raises_section_not_in_docstr_msg()),
-        format!("7:4 {}", raises_section_not_in_docstr_msg()),
+        format!("4:4 {}", raises_section_not_in_docstr_msg()),
+        format!("8:4 {}", raises_section_not_in_docstr_msg()),
     ];
     general_test(code, expected);
 }

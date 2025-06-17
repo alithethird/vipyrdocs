@@ -23,8 +23,8 @@ def function_1():
     raise
 "#;
     let expected = vec![
-        format!("3:4 {}", raises_section_not_in_docstr_msg()),
-        format!("3:4 {}", re_raise_no_exc_in_docstr_msg()),
+        format!("4:4 {}", raises_section_not_in_docstr_msg()),
+        format!("1:4 {}", re_raise_no_exc_in_docstr_msg()),
     ];
     general_test(code, expected);
 }
@@ -39,8 +39,8 @@ class Class1:
         raise
 "#;
     let expected = vec![
-        format!("5:8 {}", raises_section_not_in_docstr_msg()),
-        format!("5:8 {}", re_raise_no_exc_in_docstr_msg()),
+        format!("6:8 {}", raises_section_not_in_docstr_msg()),
+        format!("3:8 {}", re_raise_no_exc_in_docstr_msg()),
     ];
     general_test(code, expected);
 }

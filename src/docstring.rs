@@ -167,6 +167,15 @@ impl Docstring {
     }
 
     pub fn has_raises(&self) -> bool {
+        if self.raises.is_none() {
+            return false;
+        }
+        if self.raises.clone().unwrap().is_empty() {
+            return false;
+        }
+        true
+    }
+    pub fn has_raises_sections(&self) -> bool {
         if self.raises_sections.is_none() {
             return false;
         }

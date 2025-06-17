@@ -3,8 +3,8 @@ use crate::constants::{
     args_section_not_in_docstr_msg, docstr_missing_msg, duplicate_arg_msg, exc_in_docstr_msg,
     exc_not_in_docstr_msg, mult_args_sections_in_docstr_msg, mult_raises_sections_in_docstr_msg,
     mult_returns_sections_in_docstr_msg, mult_yields_sections_in_docstr_msg,
-    raises_section_in_docstr_msg, raises_section_not_in_docstr_msg, returns_section_in_docstr_msg,
-    returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
+    raises_section_in_docstr_msg, raises_section_not_in_docstr_msg, re_raise_no_exc_in_docstr_msg,
+    returns_section_in_docstr_msg, returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
     yields_section_not_in_docstr_msg,
 };
 use crate::plugin::{get_result, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind};
@@ -100,6 +100,18 @@ pub fn find_string_in_text_range(
         if !matched {
             offset += 1;
         }
+    }
+
+    if positions.is_empty() {
+        let before = &s[..start];
+        let line_number = before.lines().count(); // 1-based
+
+        let column_number = before
+            .rfind('\n')
+            .map(|idx| start - idx - 1)
+            .unwrap_or(start);
+
+        positions.push((line_number - 2, column_number, "".to_string()));
     }
 
     positions
@@ -271,6 +283,52 @@ fn check_functions_for_extra_arg_in_args_section(
 
     problem_functions
 }
+fn check_functions_for_re_raise_no_exc_in_raises_section(
+    function_infos: &Vec<FunctionInfo>,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut problem_functions: Vec<String> = Vec::new();
+
+    for function in function_infos {
+        if should_skip(function, is_test_file) {
+            continue;
+        }
+
+        // ignore if function doesn't have docstrings
+        if function.docstring.is_none() {
+            continue;
+        }
+        let excs = function.raises.clone();
+        // ignore if function doesn't raise anything
+        if excs.is_empty() {
+            continue;
+        }
+
+        let _docstring = function.docstring.clone().unwrap();
+        let docstring_raises = _docstring.get_raises();
+
+        // ignore if docstring doesn't have a raises section
+        let mut is_reraise = true;
+        for _exc in excs {
+            if _exc.exc.is_some() {
+                is_reraise = false;
+            }
+        }
+        if is_reraise && docstring_raises.is_empty() {
+            let exc_lines =
+                find_string_in_text_range(file_contents, &_docstring.get_range(), vec!["raise"]);
+            let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
+            problem_functions.push(format_problem(
+                line,
+                line_location,
+                re_raise_no_exc_in_docstr_msg(),
+            ));
+        }
+    }
+
+    problem_functions
+}
 
 fn check_functions_for_extra_exc_in_raises_section(
     function_infos: &Vec<FunctionInfo>,
@@ -294,24 +352,14 @@ fn check_functions_for_extra_exc_in_raises_section(
             continue;
         }
 
-        let docstring_raises = function.docstring.clone().unwrap().get_raises();
+        let _docstring = function.docstring.clone().unwrap();
+
+        let docstring_raises = _docstring.get_raises();
 
         // ignore if docstring doesn't have a raises section
         if docstring_raises.is_empty() {
             continue;
         }
-        let mut _range = function.docstring.clone().unwrap().get_range();
-        // // if DC022 is here we don't need to check for DC023
-        // if function
-        //     .docstring
-        //     .clone()
-        //     .unwrap()
-        //     .get_raises_sections()
-        //     .len()
-        //     > 1
-        // {
-        //     continue;
-        // }
         let mut exc_names: Vec<String> = Vec::new();
         for _exc in excs {
             if _exc.exc.is_none() {
@@ -326,8 +374,11 @@ fn check_functions_for_extra_exc_in_raises_section(
         }
         for exc_name in docstring_raises {
             if !exc_names.contains(&exc_name) {
-                let exc_lines =
-                    find_string_in_text_range(file_contents, &_range, vec!["Raise:", "Raises:"]);
+                let exc_lines = find_string_in_text_range(
+                    file_contents,
+                    &_docstring.get_range(),
+                    vec!["Raise:", "Raises:"],
+                );
                 let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
                 problem_functions.push(format_problem(
                     line,
@@ -361,23 +412,12 @@ fn check_functions_for_missing_exc_in_raises_section(
         if excs.is_empty() {
             continue;
         }
+        let _docstring = function.docstring.clone().unwrap();
 
-        let docstring_raises_sections = function.docstring.clone().unwrap().get_raises_sections();
-        let docstring_raises = function.docstring.clone().unwrap().get_raises();
+        let docstring_raises_sections = _docstring.get_raises_sections();
+        let docstring_raises = _docstring.get_raises();
 
-        if docstring_raises_sections.is_empty() {
-            continue;
-        }
-        let mut _range = function.def.range();
-        // if DC022 is here we don't need to check for DC023
-        if function
-            .docstring
-            .clone()
-            .unwrap()
-            .get_raises_sections()
-            .len()
-            > 1
-        {
+        if docstring_raises_sections.is_empty() || docstring_raises_sections.len() > 1 {
             continue;
         }
         for _exc in excs {
@@ -390,8 +430,11 @@ fn check_functions_for_missing_exc_in_raises_section(
             }
             let exc_name = exc_name.unwrap();
             if !docstring_raises.contains(&exc_name) {
-                let args_lines =
-                    find_string_in_text_range(file_contents, _range, vec![exc_name.as_str()]);
+                let args_lines = find_string_in_text_range(
+                    file_contents,
+                    function.def.range(),
+                    vec![exc_name.as_str()],
+                );
                 let (line, line_location, _) = args_lines.first().unwrap().to_owned();
                 problem_functions.push(format_problem(
                     line + 2,
@@ -653,17 +696,14 @@ fn check_functions_for_multiple_raises_section(
             continue;
         }
 
-        if function
-            .docstring
-            .clone()
-            .unwrap()
-            .get_raises_sections()
-            .len()
-            > 1
-        {
-            let mut _range = &function.docstring.clone().unwrap().get_range();
-            let raise_lines =
-                find_string_in_text_range(file_contents, _range, vec!["Raises:", "Raise:"]);
+        let _docstring = function.docstring.clone().unwrap();
+
+        if _docstring.get_raises_sections().len() > 1 {
+            let raise_lines = find_string_in_text_range(
+                file_contents,
+                &_docstring.get_range(),
+                vec!["Raises:", "Raise:"],
+            );
             if raise_lines.len() < 2 {
                 continue;
             }
@@ -879,16 +919,14 @@ fn check_functions_for_extra_raises_section(
         if function.docstring.is_none() {
             continue;
         }
+        let _docstring = function.docstring.clone().unwrap();
 
-        let raise_statements: &Vec<StmtRaise> = &function.raises;
-
-        if ((raise_statements.len() == 1 && raise_statements.first().unwrap().exc.is_none())
-            || raise_statements.is_empty())
-            && function.docstring.clone().unwrap().has_raises()
-        {
-            let mut _range = function.def.range();
-            let raise_lines =
-                find_string_in_text_range(file_contents, _range, vec!["Raise:", "Raises:"]);
+        if function.raises.is_empty() && _docstring.has_raises_sections() {
+            let raise_lines = find_string_in_text_range(
+                file_contents,
+                &_docstring.get_range(),
+                vec!["Raise:", "Raises:"],
+            );
             if raise_lines.is_empty() {
                 continue;
             }
@@ -919,15 +957,16 @@ fn check_functions_for_extra_returns_section(
         if function.docstring.is_none() {
             continue;
         }
+        let _docstring = function.docstring.clone().unwrap();
 
         let return_statements: &Vec<StmtReturn> = &function.returns;
 
         if ((return_statements.len() == 1 && return_statements.first().unwrap().value.is_none())
             || return_statements.is_empty())
-            && function.docstring.clone().unwrap().has_returns()
+            && _docstring.has_returns()
         {
-            let mut _range = function.def.range();
-            let return_lines = find_string_in_text_range(file_contents, _range, vec!["Returns:"]);
+            let return_lines =
+                find_string_in_text_range(file_contents, function.def.range(), vec!["Returns:"]);
             if return_lines.is_empty() {
                 continue;
             }
@@ -955,8 +994,8 @@ fn check_functions_for_missing_raises_section(
         if should_skip(function, is_test_file) {
             continue;
         }
-        // ignore if function doesn't have returns
         let raise_statements: &Vec<StmtRaise> = &function.raises;
+        // ignore if function doesn't have returns
         if raise_statements.is_empty() {
             continue;
         }
@@ -964,19 +1003,15 @@ fn check_functions_for_missing_raises_section(
             continue;
         }
 
-        if !function.docstring.clone().unwrap().has_raises() {
+        if !function.docstring.as_ref().unwrap().has_raises_sections() {
             for ret in raise_statements {
-                if ret.exc.is_some() {
-                    let _range = &ret.range;
-
-                    let (line, line_location) =
-                        find_line_and_column(file_contents, _range.start().to_usize()).unwrap();
-                    problem_functions.push(format_problem(
-                        line - 1,
-                        line_location,
-                        raises_section_not_in_docstr_msg(),
-                    ));
-                }
+                let (line, line_location) =
+                    find_line_and_column(file_contents, ret.range.start().to_usize()).unwrap();
+                problem_functions.push(format_problem(
+                    line,
+                    line_location,
+                    raises_section_not_in_docstr_msg(),
+                ));
             }
         }
     }
@@ -1258,6 +1293,12 @@ fn generate_rules_output(
         file_contents,
         is_test_file,
     ));
+    // DC055: reraise exception not described in the docstring
+    problem_functions.extend(check_functions_for_re_raise_no_exc_in_raises_section(
+        &things.function_infos,
+        file_contents,
+        is_test_file,
+    ));
     for class_info in &things.class_infos {
         problem_functions.extend(check_functions_for_missing_docstring(
             &class_info.funcs,
@@ -1345,6 +1386,11 @@ fn generate_rules_output(
             is_test_file,
         ));
         problem_functions.extend(check_functions_for_extra_exc_in_raises_section(
+            &class_info.funcs,
+            file_contents,
+            is_test_file,
+        ));
+        problem_functions.extend(check_functions_for_re_raise_no_exc_in_raises_section(
             &class_info.funcs,
             file_contents,
             is_test_file,
