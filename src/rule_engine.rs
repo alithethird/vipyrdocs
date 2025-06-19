@@ -1,17 +1,18 @@
 use crate::constants::{
     arg_in_docstr_msg, arg_not_in_docstr_msg, args_section_in_docstr_msg,
-    args_section_not_in_docstr_msg, docstr_missing_msg, duplicate_arg_msg, exc_in_docstr_msg,
-    exc_not_in_docstr_msg, mult_args_sections_in_docstr_msg, mult_raises_sections_in_docstr_msg,
-    mult_returns_sections_in_docstr_msg, mult_yields_sections_in_docstr_msg,
-    raises_section_in_docstr_msg, raises_section_not_in_docstr_msg, re_raise_no_exc_in_docstr_msg,
-    returns_section_in_docstr_msg, returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
+    args_section_not_in_docstr_msg, docstr_missing_msg, duplicate_arg_msg, duplicate_exc_msg,
+    exc_in_docstr_msg, exc_not_in_docstr_msg, mult_args_sections_in_docstr_msg,
+    mult_raises_sections_in_docstr_msg, mult_returns_sections_in_docstr_msg,
+    mult_yields_sections_in_docstr_msg, raises_section_in_docstr_msg,
+    raises_section_not_in_docstr_msg, re_raise_no_exc_in_docstr_msg, returns_section_in_docstr_msg,
+    returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
     yields_section_not_in_docstr_msg,
 };
 use crate::plugin::{get_result, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind};
 use pyo3::prelude::*;
 use rustpython_ast::text_size::TextRange;
 use rustpython_ast::{Arguments, Expr, ExprAttribute, ExprCall, StmtRaise, StmtReturn};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 
 fn read_file(file_name: &str) -> String {
@@ -283,6 +284,66 @@ fn check_functions_for_extra_arg_in_args_section(
 
     problem_functions
 }
+fn check_functions_for_multiple_exc_in_raises_section(
+    function_infos: &Vec<FunctionInfo>,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut problem_functions: Vec<String> = Vec::new();
+
+    for function in function_infos {
+        if should_skip(function, is_test_file) {
+            continue;
+        }
+
+        // ignore if function doesn't have docstrings
+        if function.docstring.is_none() {
+            continue;
+        }
+        let excs = function.raises.clone();
+        // ignore if function doesn't raise anything
+        if excs.is_empty() {
+            continue;
+        }
+
+        let _docstring = function.docstring.clone().unwrap();
+        let docstring_raises = _docstring.get_raises();
+        let duplicates = find_duplicates(&docstring_raises);
+        for raise in duplicates {
+            let exc_lines = find_string_in_text_range(
+                file_contents,
+                &_docstring.get_range(),
+                vec!["Raise", "Raises"],
+            );
+            let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
+            problem_functions.push(format_problem(
+                line,
+                line_location,
+                duplicate_exc_msg(raise.as_str()),
+            ));
+        }
+    }
+
+    problem_functions
+}
+
+fn find_duplicates(strings: &Vec<String>) -> Vec<String> {
+    let mut counts = HashMap::new();
+    let mut duplicates = Vec::new();
+    let mut seen = HashSet::new();
+
+    for s in strings {
+        let counter = counts.entry(s).or_insert(0);
+        *counter += 1;
+        if *counter == 2 && !seen.contains(s) {
+            duplicates.push(s.clone());
+            seen.insert(s.clone());
+        }
+    }
+
+    duplicates
+}
+
 fn check_functions_for_re_raise_no_exc_in_raises_section(
     function_infos: &Vec<FunctionInfo>,
     file_contents: &str,
@@ -361,16 +422,22 @@ fn check_functions_for_extra_exc_in_raises_section(
             continue;
         }
         let mut exc_names: Vec<String> = Vec::new();
+        let mut has_reraise = false;
         for _exc in excs {
             if _exc.exc.is_none() {
+                has_reraise = true;
                 continue;
             }
             let exc_name = get_exc_id(_exc);
             if exc_name.is_none() {
+                has_reraise = true;
                 continue;
             }
             let exc_name = exc_name.unwrap();
             exc_names.append(&mut vec![exc_name]);
+        }
+        if has_reraise {
+            continue;
         }
         for exc_name in docstring_raises {
             if !exc_names.contains(&exc_name) {
@@ -452,21 +519,32 @@ fn get_exc_id(exc: StmtRaise) -> Option<String> {
         return None;
     }
     let _exc = exc.exc.unwrap();
-    if _exc.is_call_expr() {
-        let _exc = _exc.as_call_expr();
-        return Some(_exc.unwrap().func.as_name_expr().unwrap().id.to_string());
-    }
-    if _exc.is_named_expr_expr() {
+
+    if _exc.is_attribute_expr() {
+        let _exc = _exc.as_attribute_expr();
+        Some(_exc.unwrap().attr.to_string())
+    } else if _exc.is_named_expr_expr() {
         let _exc = _exc.as_named_expr_expr();
-        return Some(_exc.unwrap().value.as_name_expr().unwrap().id.to_string());
+        Some(_exc.unwrap().value.as_name_expr().unwrap().id.to_string())
     } else if _exc.is_name_expr() {
         let _exc = _exc.as_name_expr();
-        return Some(_exc.unwrap().id.to_string());
-    } else if _exc.is_attribute_expr() {
-        let _exc = _exc.as_attribute_expr();
-        return Some(_exc.unwrap().attr.to_string());
+        Some(_exc.unwrap().id.to_string())
+    } else if _exc.is_call_expr() {
+        let some_func = &_exc.as_call_expr().unwrap().func;
+        if some_func.is_attribute_expr() {
+            let some_attribute = some_func.as_attribute_expr().unwrap();
+            Some(some_attribute.attr.to_string())
+        } else if some_func.is_name_expr() {
+            let some_exp = some_func.as_name_expr();
+            Some(some_exp.unwrap().id.to_string())
+        } else if some_func.is_lambda_expr() {
+            None
+            // Some("Lambda".to_string())
+        } else {
+            None
+        }
     } else {
-        return None;
+        None
     }
 }
 fn check_functions_for_missing_arg_in_args_section(
@@ -1299,6 +1377,12 @@ fn generate_rules_output(
         file_contents,
         is_test_file,
     ));
+    // DC056: exception documented multiple times in the docstring
+    problem_functions.extend(check_functions_for_multiple_exc_in_raises_section(
+        &things.function_infos,
+        file_contents,
+        is_test_file,
+    ));
     for class_info in &things.class_infos {
         problem_functions.extend(check_functions_for_missing_docstring(
             &class_info.funcs,
@@ -1391,6 +1475,11 @@ fn generate_rules_output(
             is_test_file,
         ));
         problem_functions.extend(check_functions_for_re_raise_no_exc_in_raises_section(
+            &class_info.funcs,
+            file_contents,
+            is_test_file,
+        ));
+        problem_functions.extend(check_functions_for_multiple_exc_in_raises_section(
             &class_info.funcs,
             file_contents,
             is_test_file,

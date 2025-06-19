@@ -235,3 +235,16 @@ pub fn re_raise_no_exc_in_docstr_msg() -> String {
         re_raise_no_exc_in_docstr_code().to_lowercase()
     )
 }
+
+pub fn duplicate_exc_code() -> String {
+    format!("{}056", ERROR_CODE_PREFIX)
+}
+pub fn duplicate_exc_msg(_raise: &str) -> String {
+    format!(
+        "{} \"{}\" exception documented multiple times{}{}",
+        duplicate_exc_code(),
+        _raise,
+        MORE_INFO_BASE,
+        duplicate_exc_code().to_lowercase()
+    )
+}
