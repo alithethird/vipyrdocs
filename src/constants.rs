@@ -248,3 +248,16 @@ pub fn duplicate_exc_msg(_raise: &str) -> String {
         duplicate_exc_code().to_lowercase()
     )
 }
+
+pub fn attrs_section_not_in_docstr_code() -> String {
+    format!("{}060", ERROR_CODE_PREFIX)
+}
+
+pub fn attrs_section_not_in_docstr_msg() -> String {
+    format!(
+        "{} a class with attributes should have the attributes section in the docstring{}{}",
+        attrs_section_not_in_docstr_code(),
+        MORE_INFO_BASE,
+        attrs_section_not_in_docstr_code().to_lowercase()
+    )
+}
