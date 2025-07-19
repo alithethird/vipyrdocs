@@ -2,8 +2,8 @@ use crate::docstring;
 use crate::docstring::Docstring;
 use rustpython_ast::text_size::TextRange;
 use rustpython_ast::{
-    Arguments, ExprYield, ExprYieldFrom, Stmt, StmtAsyncFunctionDef, StmtClassDef, StmtFunctionDef,
-    StmtRaise, StmtReturn, Visitor,
+    Arguments, ExprAttribute, ExprYield, ExprYieldFrom, Stmt, StmtAssign, StmtAsyncFunctionDef,
+    StmtClassDef, StmtFunctionDef, StmtRaise, StmtReturn, Visitor,
 };
 use rustpython_parser::{parse, Mode};
 
@@ -123,6 +123,7 @@ pub struct ClassInfo {
     pub def: StmtClassDef<TextRange>,
     pub funcs: Vec<FunctionInfo>,
     pub docstring: Option<Docstring>,
+    pub attributes: Vec<String>,
 }
 fn get_docs(expr: &Expr<TextRange>) -> Option<Docstring> {
     if expr.is_constant_expr() {
@@ -322,6 +323,46 @@ impl Visitor for ReturnCollector {
 //     }
 // }
 
+struct AttributeCollector {
+    pub attributes: Vec<String>,
+    class_depth: usize,
+}
+
+impl AttributeCollector {
+    pub fn new() -> Self {
+        Self {
+            attributes: Vec::new(),
+            class_depth: 0,
+        }
+    }
+}
+
+impl Visitor for AttributeCollector {
+    fn visit_stmt_class_def(&mut self, node: StmtClassDef<TextRange>) {
+        self.class_depth += 1;
+        for stmt in &node.body {
+            self.visit_stmt(stmt.clone());
+        }
+        self.class_depth -= 1;
+    }
+
+    fn visit_expr_attribute(&mut self, node: ExprAttribute<TextRange>) {
+        if self.class_depth == 0 {
+            self.attributes.push(node.attr.to_string());
+        }
+    }
+    fn visit_stmt_assign(&mut self, node: StmtAssign<TextRange>) {
+        let targets = &node.targets;
+        println!("{:?}", targets);
+        for target in targets {
+            if target.as_name_expr().is_some() {
+                let _target = target.as_name_expr().unwrap().id.clone();
+                self.attributes.push(_target.to_string());
+            }
+        }
+    }
+}
+
 impl Visitor for DocstringCollector {
     fn visit_stmt_async_function_def(&mut self, node: StmtAsyncFunctionDef<TextRange>) {
         let function_info = get_func(&FunctionDefKind::Async(node.clone()));
@@ -350,7 +391,9 @@ impl Visitor for DocstringCollector {
         let mut class_docs: Option<Docstring> = None;
         let mut class_funcs: Vec<FunctionInfo> = Vec::new();
 
+        let mut attribute_collector = AttributeCollector::new();
         for stmt in &node.body {
+            attribute_collector.visit_stmt(stmt.clone());
             if let Stmt::Expr(expr_stmt) = stmt {
                 let temp_doc = get_docs(&expr_stmt.value);
                 if temp_doc.is_some() {
@@ -368,6 +411,7 @@ impl Visitor for DocstringCollector {
             def: node.clone(),
             funcs: class_funcs,
             docstring: class_docs,
+            attributes: attribute_collector.attributes,
         };
 
         self.class_infos.push(class_info);

@@ -1,17 +1,20 @@
 use crate::constants::{
     arg_in_docstr_msg, arg_not_in_docstr_msg, args_section_in_docstr_msg,
-    args_section_not_in_docstr_msg, docstr_missing_msg, duplicate_arg_msg, duplicate_exc_msg,
-    exc_in_docstr_msg, exc_not_in_docstr_msg, mult_args_sections_in_docstr_msg,
-    mult_raises_sections_in_docstr_msg, mult_returns_sections_in_docstr_msg,
-    mult_yields_sections_in_docstr_msg, raises_section_in_docstr_msg,
-    raises_section_not_in_docstr_msg, re_raise_no_exc_in_docstr_msg, returns_section_in_docstr_msg,
-    returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
+    args_section_not_in_docstr_msg, attrs_section_not_in_docstr_msg, docstr_missing_msg,
+    duplicate_arg_msg, duplicate_exc_msg, exc_in_docstr_msg, exc_not_in_docstr_msg,
+    mult_args_sections_in_docstr_msg, mult_raises_sections_in_docstr_msg,
+    mult_returns_sections_in_docstr_msg, mult_yields_sections_in_docstr_msg,
+    raises_section_in_docstr_msg, raises_section_not_in_docstr_msg, re_raise_no_exc_in_docstr_msg,
+    returns_section_in_docstr_msg, returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
     yields_section_not_in_docstr_msg,
 };
-use crate::plugin::{get_result, ClassInfo, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind};
+use crate::plugin::{
+    get_result, ClassInfo, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind,
+};
 use pyo3::prelude::*;
 use rustpython_ast::text_size::TextRange;
 use rustpython_ast::{Arguments, Expr, ExprAttribute, ExprCall, StmtRaise, StmtReturn};
+use rustpython_parser::text_size::TextSize;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 
@@ -203,7 +206,7 @@ fn check_functions_for_duplicate_arg_in_args_section(
 
 fn check_functions_for_extra_arg_in_args_section(
     function_infos: &Vec<FunctionInfo>,
-    file_contents: &str,      ,
+    file_contents: &str,
     is_test_file: bool,
 ) -> Vec<String> {
     let mut problem_functions: Vec<String> = Vec::new();
@@ -285,12 +288,42 @@ fn check_functions_for_extra_arg_in_args_section(
     problem_functions
 }
 fn check_classes_for_attrs_section_not_in_docstr(
-    class_info: ClassInfo,
+    class_info: &ClassInfo,
     file_contents: &str,
     is_test_file: bool,
 ) -> Vec<String> {
+    let mut errors = Vec::new();
 
-    vec!["Some".to_string()]
+    // Skip if this is a test file (similar pattern to other rules)
+    if is_test_file {
+        return errors;
+    }
+
+    if class_info.docstring.is_none() {
+        return errors;
+    }
+
+    if class_info.attributes.is_empty() {
+        return errors;
+    }
+    if let Some(docstring) = &class_info.docstring {
+        // Check if docstring has attrs sections
+        if !docstring.has_attrs_sections() {
+            let exc_lines = find_string_in_text_range(
+                file_contents,
+                &TextRange::new(TextSize::new(0), class_info.def.range.end()),
+                vec![class_info.attributes[0].as_str()],
+            );
+            let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
+            errors.push(format_problem(
+                line,
+                line_location,
+                attrs_section_not_in_docstr_msg(),
+            ));
+        }
+    }
+
+    errors
 }
 
 fn check_functions_for_multiple_exc_in_raises_section(
@@ -1495,7 +1528,7 @@ fn generate_rules_output(
         ));
         // DC060: attribute section not in docstring
         problem_functions.extend(check_classes_for_attrs_section_not_in_docstr(
-            &class_info,
+            class_info,
             file_contents,
             is_test_file,
         ));

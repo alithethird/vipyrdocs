@@ -58,11 +58,11 @@ Outputs any functions/classes missing docstrings or having incomplete ones.
 - 👌 DCO050: function/ method raises one or more exceptions and the docstring does not have a raises section.
 - 👌 DCO051: function/ method that raises no exceptions and the docstring has a raises section.
 - 👌 DCO052: function/ method that raises one or more exceptions and the docstring has multiple raises sections.
-- 🙅 DCO053: function/ method that raises one or more exceptions where one or more of the exceptions is not described in the docstring.
-- 🙅 DCO054: function/ method has one or more exceptions described in the docstring which are not raised in the function/ method.
-- 🙅 DCO055: function/ method that has a raise without an exception has an empty raises section in the docstring.
-- 🙅 DCO056: function/ method has one or more exceptions described in the docstring multiple times.
-- 🙅 DCO060: class has one or more public attributes and the docstring does not have an attributes section.
+- 👌 DCO053: function/ method that raises one or more exceptions where one or more of the exceptions is not described in the docstring.
+- 👌 DCO054: function/ method has one or more exceptions described in the docstring which are not raised in the function/ method.
+- 👌 DCO055: function/ method that has a raise without an exception has an empty raises section in the docstring.
+- 👌 DCO056: function/ method has one or more exceptions described in the docstring multiple times.
+- 👌 DCO060: class has one or more public attributes and the docstring does not have an attributes section.
 - 🙅 DCO061: class with no attributes and the docstring has an attributes section.
 - 🙅 DCO062: class with one or more attributes and the docstring has multiple attributes sections.
 - 🙅 DCO063: class has one or more public attributes not described in the docstring.

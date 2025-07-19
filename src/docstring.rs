@@ -245,6 +245,38 @@ impl Docstring {
     pub fn get_range(&self) -> TextRange {
         self.range
     }
+
+    pub fn has_attrs(&self) -> bool {
+        if self.attrs.is_none() {
+            return false;
+        }
+        if self.attrs.clone().unwrap().is_empty() {
+            return false;
+        }
+        true
+    }
+    pub fn has_attrs_sections(&self) -> bool {
+        if self.attrs_sections.is_none() {
+            return false;
+        }
+
+        if self.attrs_sections.clone().unwrap().is_empty() {
+            return false;
+        }
+        true
+    }
+    pub fn get_attrs(&self) -> Vec<String> {
+        if self.attrs.is_none() {
+            return Vec::<String>::new();
+        }
+        self.attrs.clone().unwrap()
+    }
+    pub fn get_attrs_sections(&self) -> Vec<String> {
+        if self.attrs_sections.is_none() {
+            return Vec::<String>::new();
+        }
+        self.attrs_sections.clone().unwrap()
+    }
 }
 
 #[pyfunction]
