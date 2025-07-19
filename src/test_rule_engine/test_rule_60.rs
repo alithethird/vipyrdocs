@@ -22,7 +22,7 @@ class Class1:
     """Docstring 1."""
     attr_1 = "value 1"
 "#;
-    let expected = vec![format!("3:4 {}", attrs_section_not_in_docstr_msg())];
+    let expected = vec![format!("2:4 {}", attrs_section_not_in_docstr_msg())];
     general_test(code, expected);
 }
 
@@ -38,8 +38,8 @@ class Class2:
     attr_2 = "value 2"
 "#;
     let expected = vec![
-        format!("3:4 {}", attrs_section_not_in_docstr_msg()),
-        format!("7:4 {}", attrs_section_not_in_docstr_msg()),
+        format!("2:4 {}", attrs_section_not_in_docstr_msg()),
+        format!("6:4 {}", attrs_section_not_in_docstr_msg()),
     ];
     general_test(code, expected);
 }
