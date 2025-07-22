@@ -261,3 +261,43 @@ pub fn attrs_section_not_in_docstr_msg() -> String {
         attrs_section_not_in_docstr_code().to_lowercase()
     )
 }
+
+pub fn attrs_section_in_docstr_code() -> String {
+    format!("{}061", ERROR_CODE_PREFIX)
+}
+
+pub fn attrs_section_in_docstr_msg() -> String {
+    format!(
+        "{} a class without attributes should not have the attributes section in the docstring{}{}",
+        attrs_section_in_docstr_code(),
+        MORE_INFO_BASE,
+        attrs_section_in_docstr_code().to_lowercase()
+    )
+}
+pub fn mult_attrs_section_in_docstr_code() -> String {
+    format!("{}062", ERROR_CODE_PREFIX)
+}
+
+pub fn mult_attrs_section_in_docstr_msg(_attribute: &str) -> String {
+    format!(
+        "{} a docstring should only contain a single attributes section, found {}{}{}",
+        mult_attrs_section_in_docstr_code(),
+        _attribute,
+        MORE_INFO_BASE,
+        mult_attrs_section_in_docstr_code().to_lowercase()
+    )
+}
+
+pub fn attr_not_in_docstr_code() -> String {
+    format!("{}063", ERROR_CODE_PREFIX)
+}
+
+pub fn attr_not_in_docstr_msg(_attribute: &str) -> String {
+    format!(
+        "{} {} attribute/ property should be described in the docstring {}{}",
+        attr_not_in_docstr_code(),
+        _attribute,
+        MORE_INFO_BASE,
+        attr_not_in_docstr_code().to_lowercase()
+    )
+}

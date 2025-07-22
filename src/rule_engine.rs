@@ -6,7 +6,8 @@ use crate::constants::{
     mult_returns_sections_in_docstr_msg, mult_yields_sections_in_docstr_msg,
     raises_section_in_docstr_msg, raises_section_not_in_docstr_msg, re_raise_no_exc_in_docstr_msg,
     returns_section_in_docstr_msg, returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
-    yields_section_not_in_docstr_msg,
+    yields_section_not_in_docstr_msg,attrs_section_in_docstr_msg,mult_attrs_section_in_docstr_msg,
+    attr_not_in_docstr_msg,
 };
 use crate::plugin::{
     get_result, ClassInfo, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind,
@@ -325,7 +326,194 @@ fn check_classes_for_attrs_section_not_in_docstr(
 
     errors
 }
+fn check_classes_for_extra_attrs_section_in_docstr(
+    class_info: &ClassInfo,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut errors = Vec::new();
 
+    // Skip if this is a test file (similar pattern to other rules)
+    if is_test_file {
+        return errors;
+    }
+
+    if class_info.docstring.is_none() {
+        return errors;
+    }
+    let public_attributes: Vec<String> = class_info.attributes.clone()
+        .into_iter()
+        .filter(|attr| !attr.starts_with('_'))
+        .collect();
+
+    if !public_attributes.is_empty() {
+        return errors;
+    }
+
+    if let Some(docstring) = &class_info.docstring {
+        // Check if docstring has attrs sections
+        if !docstring.has_attrs_sections() {
+            return errors;
+        }
+        let exc_lines = find_string_in_text_range(
+            file_contents,
+            &TextRange::new(TextSize::new(0), class_info.def.range.end()),
+            vec!["attrs", "attributes"],
+        );
+        let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
+        errors.push(format_problem(
+            line,
+            line_location,
+            attrs_section_in_docstr_msg(),
+        ));
+    }
+    errors
+}
+
+
+fn check_classes_for_multiple_attrs_section_in_docstr(
+    class_info: &ClassInfo,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut errors = Vec::new();
+
+    // Skip if this is a test file (similar pattern to other rules)
+    if is_test_file {
+        return errors;
+    }
+
+    if class_info.docstring.is_none() {
+        return errors;
+    }
+    if let Some(docstring) = &class_info.docstring {
+        // Check if docstring has attrs sections
+        if !docstring.has_attrs_sections() {
+            return errors;
+        }
+        if docstring.get_attrs_sections().len() == 1 {
+            return  errors;
+        }
+        let exc_lines = find_string_in_text_range(
+            file_contents,
+            &TextRange::new(TextSize::new(0), class_info.def.range.end()),
+            vec!["Attrs", "Attributes"],
+        );
+        // TODO: attribute section can be attrs instead of Attrs. Make sure the
+        // find_string_in_text_range function returns the actual found string
+        let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
+        let joined_attribute_sections: String = exc_lines
+            .iter()
+            .map(|(_, _, third)| third)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join(",");
+
+        errors.push(format_problem(
+            line,
+            line_location,
+            mult_attrs_section_in_docstr_msg(joined_attribute_sections.as_str()),
+        ));
+    }
+    errors
+}
+fn check_classes_for_missing_attrs_in_docstr(
+    class_info: &ClassInfo,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut errors = Vec::new();
+
+    // Skip if this is a test file (similar pattern to other rules)
+    if is_test_file {
+        return errors;
+    }
+
+    if class_info.docstring.is_none() {
+        return errors;
+    }
+    let public_attributes: Vec<String> = class_info.attributes.clone()
+        .into_iter()
+        .filter(|attr| !attr.starts_with('_'))
+        .collect();
+
+    if public_attributes.is_empty() {
+        return errors;
+    }
+
+    if let Some(docstring) = &class_info.docstring {
+        // Check if docstring has attrs sections
+        if !docstring.has_attrs_sections() {
+            return errors;
+        }
+
+        let docstr_attrs = docstring.get_attrs();
+
+        for attr in public_attributes {
+            if !docstr_attrs.contains(&attr) {
+                let exc_lines = find_string_in_text_range(
+                    file_contents,
+                    &TextRange::new(TextSize::new(0), class_info.def.range.end()),
+                    vec![attr.as_str()],
+                );
+                let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
+                errors.push(format_problem(
+                    line,
+                    line_location,
+                    attr_not_in_docstr_msg(attr.as_str()),
+                ));
+            }
+        }
+    }
+    errors
+}
+
+
+// fn check_classes_for_extra_attrs_section_in_docstr(
+//     class_info: &ClassInfo,
+//     file_contents: &str,
+//     is_test_file: bool,
+// ) -> Vec<String> {
+//     let mut errors = Vec::new();
+//
+//     // Skip if this is a test file (similar pattern to other rules)
+//     if is_test_file {
+//         return errors;
+//     }
+//
+//     if class_info.docstring.is_none() {
+//         return errors;
+//     }
+//
+//     let attributes = &class_info.attributes;
+//
+//
+//     if let Some(docstring) = &class_info.docstring {
+//         // Check if docstring has attrs sections
+//         if !docstring.has_attrs_sections() {
+//             return errors;
+//         }
+//
+//         for attr in docstring.get_attrs(){
+//
+//             if !attributes.contains(&attr){
+//
+//                 let exc_lines = find_string_in_text_range(
+//                     file_contents,
+//                     &TextRange::new(TextSize::new(0), class_info.def.range.end()),
+//                     vec![attr.as_str()],
+//                 );
+//                 let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
+//                 errors.push(format_problem(
+//                     line,
+//                     line_location,
+//                     attrs_section_in_docstr_msg(attr),
+//                 ));
+//             }
+//         }
+//     }
+//     errors
+// }
 fn check_functions_for_multiple_exc_in_raises_section(
     function_infos: &Vec<FunctionInfo>,
     file_contents: &str,
@@ -1532,6 +1720,30 @@ fn generate_rules_output(
             file_contents,
             is_test_file,
         ));
+        // DC061: attribute section in docstring but no attribute
+        problem_functions.extend(check_classes_for_extra_attrs_section_in_docstr(
+            class_info,
+            file_contents,
+            is_test_file,
+        ));
+        // DC062: There should only be 1 attribute section in docstring
+        problem_functions.extend(check_classes_for_multiple_attrs_section_in_docstr(
+            class_info,
+            file_contents,
+            is_test_file,
+        ));
+        // DC063: Attribute should be in docstring
+        problem_functions.extend(check_classes_for_missing_attrs_in_docstr(
+            class_info,
+            file_contents,
+            is_test_file,
+        ));
+
+
+
+
+
+
     }
     problem_functions
 }

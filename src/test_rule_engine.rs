@@ -18,6 +18,9 @@ mod test_rule_55;
 mod test_rule_56;
 mod test_rule_5x;
 mod test_rule_60;
+mod test_rule_61;
+mod test_rule_62;
+mod test_rule_63;
 
 use crate::constants::{returns_section_in_docstr_msg, returns_section_not_in_docstr_msg};
 use crate::rule_engine::lint_file;
