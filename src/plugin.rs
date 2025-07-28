@@ -1,10 +1,7 @@
 use crate::docstring;
 use crate::docstring::Docstring;
 use rustpython_ast::text_size::TextRange;
-use rustpython_ast::{
-    Arguments, ExprAttribute, ExprYield, ExprYieldFrom, Stmt, StmtAssign, StmtAsyncFunctionDef,
-    StmtClassDef, StmtFunctionDef, StmtRaise, StmtReturn, Visitor,
-};
+use rustpython_ast::{Arguments, ExprAttribute, ExprCall, ExprYield, ExprYieldFrom, Stmt, StmtAssign, StmtAsyncFunctionDef, StmtClassDef, StmtFunctionDef, StmtRaise, StmtReturn, Visitor};
 use rustpython_parser::{parse, Mode};
 
 use rustpython_ast::Expr;
@@ -35,18 +32,6 @@ pub enum YieldKind {
 }
 
 impl YieldKind {
-    // pub fn name(&self) -> &str {
-    //     match self {
-    //         FunctionDefKind::Sync(def) => &def.name,
-    //         FunctionDefKind::Async(def) => &def.name,
-    //     }
-    // }
-    // pub fn body(&self) -> &Vec<Stmt> {
-    //     match self {
-    //         FunctionDefKind::Sync(def) => &def.body,
-    //         FunctionDefKind::Async(def) => &def.body,
-    //     }
-    // }
     pub fn range(&self) -> &TextRange {
         match self {
             YieldKind::Yield(def) => &def.range,
@@ -102,21 +87,6 @@ pub struct FunctionInfo {
     pub raises: Vec<StmtRaise>,
     pub docstring: Option<Docstring>,
 }
-//
-// impl FunctionInfo{
-//     fn is_test_function(&self) -> bool {
-//         if self.def.name().starts_with("test") {
-//             return true;
-//         }
-//         false
-//     }
-//     fn is_private_function(&self) -> bool {
-//         if self.def.name().starts_with("_private") && !self.def.name().ends_with("_"){
-//             return true;
-//         }
-//         false
-//     }
-// }
 
 #[allow(dead_code)]
 pub struct ClassInfo {
@@ -311,18 +281,6 @@ impl Visitor for ReturnCollector {
         }
     }
 }
-
-//
-// struct ReturnCollector {
-//     pub returns: Vec<StmtReturn>,
-// }
-//
-// impl Visitor for ReturnCollector {
-//     fn visit_stmt_return(&mut self, node: StmtReturn<TextRange>) {
-//         self.returns.push(node);
-//     }
-// }
-
 struct AttributeCollector {
     pub attributes: Vec<String>,
     class_depth: usize,
@@ -361,8 +319,53 @@ impl Visitor for AttributeCollector {
             }
         }
     }
+    fn visit_stmt_function_def(&mut self, node: StmtFunctionDef<TextRange>) {
+        for dec in &node.decorator_list {
+             if is_property(dec){
+                self.attributes.push(node.name.to_string());
+            }
+        }
+        // self.generic_visit_stmt_function_def(node);
+    }
+    fn visit_stmt_async_function_def(&mut self, node: StmtAsyncFunctionDef<TextRange>) {
+        for dec in &node.decorator_list {
+            if is_property(dec){
+                self.attributes.push(node.name.to_string());
+            }
+        }
+        // self.generic_visit_stmt_async_function_def(node);
+    }
 }
-
+fn is_property(decorator: &Expr) -> bool {
+    let property_tag_list = ["property", "cached_property"];
+        if decorator.is_name_expr() {
+            let id = &decorator.as_name_expr().unwrap().id;
+            for property_tag in property_tag_list{
+                if id.eq_ignore_ascii_case(property_tag) {
+                    return true;
+                }
+            }
+        }
+        if decorator.is_call_expr() {
+            let call: &ExprCall = decorator.as_call_expr().unwrap();
+            if let Some(name_expr) = call.func.as_name_expr() {
+                let id = &name_expr.id;
+                for property_tag in property_tag_list{
+                    if id.eq_ignore_ascii_case(property_tag) {
+                        return true;
+                    }
+                }
+            }}
+            if decorator.is_attribute_expr() {
+                let id = &decorator.as_attribute_expr().unwrap().attr;
+                for property_tag in property_tag_list{
+                    if id.eq_ignore_ascii_case(property_tag) {
+                        return true;
+                    }
+                }
+            }
+    false
+}
 impl Visitor for DocstringCollector {
     fn visit_stmt_async_function_def(&mut self, node: StmtAsyncFunctionDef<TextRange>) {
         let function_info = get_func(&FunctionDefKind::Async(node.clone()));
