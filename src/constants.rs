@@ -301,3 +301,17 @@ pub fn attr_not_in_docstr_msg(_attribute: &str) -> String {
         attr_not_in_docstr_code().to_lowercase()
     )
 }
+
+pub fn attr_in_docstr_code() -> String {
+    format!("{}064", ERROR_CODE_PREFIX)
+}
+
+pub fn attr_in_docstr_msg(_attribute: &str) -> String {
+    format!(
+        "{} {} attribute should not be described in the docstring {}{}",
+        attr_in_docstr_code(),
+        _attribute,
+        MORE_INFO_BASE,
+        attr_in_docstr_code().to_lowercase()
+    )
+}
