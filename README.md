@@ -65,7 +65,7 @@ Outputs any functions/classes missing docstrings or having incomplete ones.
 - 👌 DCO060: class has one or more public attributes and the docstring does not have an attributes section.
 - 👌 DCO061: class with no attributes and the docstring has an attributes section.
 - 👌 DCO062: class with one or more attributes and the docstring has multiple attributes sections.
-- 🙅 DCO063: class has one or more public attributes not described in the docstring.
+- 👌 DCO063: class has one or more public attributes not described in the docstring.
 - 🙅 DCO064: class has one or more attributes described in the docstring which are not attributes of the class.
 - 🙅 DCO065: class has one or more attributes described in the docstring multiple times.
 

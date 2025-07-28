@@ -28,7 +28,7 @@ class Class1:
         """Docstring 2."""
         return "value 1"
 "#;
-    let expected = vec![format!("8:4 {}", attr_not_in_docstr_msg("attr_1"))];
+    let expected = vec![format!("6:8 {}", attr_not_in_docstr_msg("attr_1"))];
     general_test(code, expected);
 }
 
@@ -45,7 +45,7 @@ class Class1:
         """Docstring 2."""
         return "value 1"
 "#;
-    let expected = vec![format!("8:4 {}", attr_not_in_docstr_msg("attr_1"))];
+    let expected = vec![format!("6:8 {}", attr_not_in_docstr_msg("attr_1"))];
     general_test(code, expected);
 }
 
@@ -62,7 +62,7 @@ class Class1:
         """Docstring 2."""
         return "value 1"
 "#;
-    let expected = vec![format!("8:4 {}", attr_not_in_docstr_msg("attr_1"))];
+    let expected = vec![format!("6:8 {}", attr_not_in_docstr_msg("attr_1"))];
     general_test(code, expected);
 }
 
@@ -80,7 +80,7 @@ class Class1:
         self.attr_2 = "value 2"
         return "value 1"
 "#;
-    let expected = vec![format!("3:4 {}", attr_not_in_docstr_msg("attr_1"))];
+    let expected = vec![format!("6:8 {}", attr_not_in_docstr_msg("attr_1"))];
     general_test(code, expected);
 }
 
@@ -97,7 +97,7 @@ class Class1:
         """Docstring 2."""
         return "value 1"
 "#;
-    let expected = vec![format!("8:4 {}", attr_not_in_docstr_msg("attr_1"))];
+    let expected = vec![format!("6:14 {}", attr_not_in_docstr_msg("attr_1"))];
     general_test(code, expected);
 }
 
@@ -114,7 +114,7 @@ class Class1:
         """Docstring 2."""
         return "value 1"
 "#;
-    let expected = vec![format!("8:4 {}", attr_not_in_docstr_msg("attr_1"))];
+    let expected = vec![format!("6:8 {}", attr_not_in_docstr_msg("attr_1"))];
     general_test(code, expected);
 }
 
@@ -152,8 +152,8 @@ class Class1:
         return "value 3"
 "#;
     let expected = vec![
-        format!("8:4 {}", attr_not_in_docstr_msg("attr_1")),
-        format!("12:4 {}", attr_not_in_docstr_msg("attr_2")),
+        format!("6:8 {}", attr_not_in_docstr_msg("attr_1")),
+        format!("10:8 {}", attr_not_in_docstr_msg("attr_2")),
     ];
     general_test(code, expected);
 }
