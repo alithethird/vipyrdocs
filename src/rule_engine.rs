@@ -417,6 +417,59 @@ fn check_classes_for_multiple_attrs_section_in_docstr(
     }
     errors
 }
+
+
+fn check_classes_for_multiple_attrs_in_docstr(
+    class_info: &ClassInfo,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut errors = Vec::new();
+
+    // Skip if this is a test file (similar pattern to other rules)
+    if is_test_file {
+        return errors;
+    }
+
+    if class_info.docstring.is_none() {
+        return errors;
+    }
+    else{
+        return errors;
+    }
+    if let Some(docstring) = &class_info.docstring {
+        // Check if docstring has attrs sections
+        if !docstring.has_attrs_sections() {
+            return errors;
+        }
+        if docstring.get_attrs_sections().len() == 1 {
+            return  errors;
+        }
+        let exc_lines = find_string_in_text_range(
+            file_contents,
+            &TextRange::new(TextSize::new(0), class_info.def.range.end()),
+            vec!["Attrs", "Attributes"],
+        );
+        // TODO: attribute section can be attrs instead of Attrs. Make sure the
+        // find_string_in_text_range function returns the actual found string
+        let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
+        let joined_attribute_sections: String = exc_lines
+            .iter()
+            .map(|(_, _, third)| third)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join(",");
+
+        errors.push(format_problem(
+            line,
+            line_location,
+            mult_attrs_section_in_docstr_msg(joined_attribute_sections.as_str()),
+        ));
+    }
+    errors
+}
+
+
 fn check_classes_for_missing_attrs_in_docstr(
     class_info: &ClassInfo,
     file_contents: &str,
@@ -1791,6 +1844,13 @@ fn generate_rules_output(
 
         // DC064: Attribute should not be in docstring
         problem_functions.extend(check_classes_for_extra_attrs_in_docstr(
+            class_info,
+            file_contents,
+            is_test_file,
+        ));
+
+        // DC065: Attribute documented multiple times
+        problem_functions.extend(check_classes_for_multiple_attrs_in_docstr(
             class_info,
             file_contents,
             is_test_file,
