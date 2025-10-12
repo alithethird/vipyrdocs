@@ -324,7 +324,7 @@ pub fn duplicate_attr_docstr_code() -> String {
 pub fn duplicate_attr_docstr_msg(_attribute: &str) -> String {
     format!(
         "{} {} attribute documented multiple times {}{}",
-        attr_in_docstr_code(),
+        duplicate_attr_docstr_code(),
         _attribute,
         MORE_INFO_BASE,
         attr_in_docstr_code().to_lowercase()

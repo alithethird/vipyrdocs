@@ -7,7 +7,7 @@ use crate::constants::{
     raises_section_in_docstr_msg, raises_section_not_in_docstr_msg, re_raise_no_exc_in_docstr_msg,
     returns_section_in_docstr_msg, returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
     yields_section_not_in_docstr_msg,attrs_section_in_docstr_msg,mult_attrs_section_in_docstr_msg,
-    attr_not_in_docstr_msg,attr_in_docstr_msg,
+    attr_not_in_docstr_msg,attr_in_docstr_msg,duplicate_attr_docstr_msg,
 };
 use crate::plugin::{
     get_result, ClassInfo, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind,
@@ -341,12 +341,14 @@ fn check_classes_for_extra_attrs_section_in_docstr(
     if class_info.docstring.is_none() {
         return errors;
     }
+    if let Some(docstring) = &class_info.docstring {
     let public_attributes: Vec<String> = class_info.attributes.clone()
         .into_iter()
         .filter(|attr| !attr.starts_with('_'))
         .collect();
 
-    if !public_attributes.is_empty() {
+    let duplicates = find_duplicates(&docstring.get_attrs());
+    if !duplicates.is_empty() {
         return errors;
     }
 
@@ -366,7 +368,7 @@ fn check_classes_for_extra_attrs_section_in_docstr(
             line_location,
             attrs_section_in_docstr_msg(),
         ));
-    }
+    }}
     errors
 }
 
@@ -434,21 +436,23 @@ fn check_classes_for_multiple_attrs_in_docstr(
     if class_info.docstring.is_none() {
         return errors;
     }
-    else{
-        return errors;
-    }
     if let Some(docstring) = &class_info.docstring {
         // Check if docstring has attrs sections
         if !docstring.has_attrs_sections() {
             return errors;
         }
-        if docstring.get_attrs_sections().len() == 1 {
-            return  errors;
-        }
+
+        let duplicates = find_duplicates(&docstring.get_attrs());
+
+
+        println!("###duplicates : ");
+        for duplicate in duplicates{
+
+        println!("-  {}", duplicate);
         let exc_lines = find_string_in_text_range(
             file_contents,
             &TextRange::new(TextSize::new(0), class_info.def.range.end()),
-            vec!["Attrs", "Attributes"],
+            vec![&duplicate],
         );
         // TODO: attribute section can be attrs instead of Attrs. Make sure the
         // find_string_in_text_range function returns the actual found string
@@ -463,8 +467,9 @@ fn check_classes_for_multiple_attrs_in_docstr(
         errors.push(format_problem(
             line,
             line_location,
-            mult_attrs_section_in_docstr_msg(joined_attribute_sections.as_str()),
+            duplicate_attr_docstr_msg(duplicate.as_str()),
         ));
+        }
     }
     errors
 }
