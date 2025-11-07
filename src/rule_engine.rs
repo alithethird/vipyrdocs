@@ -1,13 +1,14 @@
 use crate::constants::{
     arg_in_docstr_msg, arg_not_in_docstr_msg, args_section_in_docstr_msg,
-    args_section_not_in_docstr_msg, attrs_section_not_in_docstr_msg, docstr_missing_msg,
-    duplicate_arg_msg, duplicate_exc_msg, exc_in_docstr_msg, exc_not_in_docstr_msg,
-    mult_args_sections_in_docstr_msg, mult_raises_sections_in_docstr_msg,
-    mult_returns_sections_in_docstr_msg, mult_yields_sections_in_docstr_msg,
-    raises_section_in_docstr_msg, raises_section_not_in_docstr_msg, re_raise_no_exc_in_docstr_msg,
-    returns_section_in_docstr_msg, returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
-    yields_section_not_in_docstr_msg,attrs_section_in_docstr_msg,mult_attrs_section_in_docstr_msg,
-    attr_not_in_docstr_msg,attr_in_docstr_msg,duplicate_attr_docstr_msg,
+    args_section_not_in_docstr_msg, attr_in_docstr_msg, attr_not_in_docstr_msg,
+    attrs_section_in_docstr_msg, attrs_section_not_in_docstr_msg, docstr_missing_msg,
+    duplicate_arg_msg, duplicate_attr_docstr_msg, duplicate_exc_msg, exc_in_docstr_msg,
+    exc_not_in_docstr_msg, mult_args_sections_in_docstr_msg, mult_attrs_section_in_docstr_msg,
+    mult_raises_sections_in_docstr_msg, mult_returns_sections_in_docstr_msg,
+    mult_yields_sections_in_docstr_msg, raises_section_in_docstr_msg,
+    raises_section_not_in_docstr_msg, re_raise_no_exc_in_docstr_msg, returns_section_in_docstr_msg,
+    returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
+    yields_section_not_in_docstr_msg,
 };
 use crate::plugin::{
     get_result, ClassInfo, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind,
@@ -304,16 +305,27 @@ fn check_classes_for_attrs_section_not_in_docstr(
         return errors;
     }
 
-    if class_info.attributes.is_empty() {
+    let public_class_attributes: Vec<String> = class_info
+        .attributes
+        .iter()
+        .filter(|attr| !attr.starts_with('_'))
+        .cloned()
+        .collect();
+
+    if public_class_attributes.is_empty() {
         return errors;
     }
     if let Some(docstring) = &class_info.docstring {
         // Check if docstring has attrs sections
         if !docstring.has_attrs_sections() {
+            let attr_name = public_class_attributes
+                .first()
+                .cloned()
+                .unwrap_or_else(|| class_info.attributes.first().cloned().unwrap_or_default());
             let exc_lines = find_string_in_text_range(
                 file_contents,
                 &TextRange::new(TextSize::new(0), class_info.def.range.end()),
-                vec![class_info.attributes[0].as_str()],
+                vec![attr_name.as_str()],
             );
             let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
             errors.push(format_problem(
@@ -341,28 +353,48 @@ fn check_classes_for_extra_attrs_section_in_docstr(
     if class_info.docstring.is_none() {
         return errors;
     }
-    
+
     if let Some(docstring) = &class_info.docstring {
         // Check if docstring has attrs sections
         if !docstring.has_attrs_sections() {
             return errors;
         }
-        
-        let public_attributes: Vec<String> = class_info.attributes.clone()
+
+        let public_class_attributes: Vec<String> = class_info
+            .attributes
+            .clone()
+            .into_iter()
+            .filter(|attr| !attr.starts_with('_'))
+            .collect();
+        let public_instance_attributes: Vec<String> = class_info
+            .instance_attributes
+            .clone()
             .into_iter()
             .filter(|attr| !attr.starts_with('_'))
             .collect();
 
         // Rule 61: If there's an attrs section but no public attributes, it's extra
-        // However, if private attributes are documented in the attrs section, 
+        // However, if private attributes are documented in the attrs section,
         // then the attrs section is justified
-        if public_attributes.is_empty() {
+        if public_class_attributes.is_empty() && public_instance_attributes.is_empty() {
             let docstr_attrs = docstring.get_attrs();
-            let private_attrs_documented = docstr_attrs.iter()
-                .any(|attr| attr.starts_with('_'));
-            
-            // Only trigger rule 61 if no public attributes AND no private attributes documented
-            if !private_attrs_documented {
+
+            // If the docstring documents a private attribute that's actually present,
+            // treat it as a valid attribute definition so the attrs section is justified.
+            if docstr_attrs.iter().any(|attr| attr.starts_with('_'))
+                && (class_info
+                    .attributes
+                    .iter()
+                    .any(|attr| attr.starts_with('_'))
+                    || class_info
+                        .instance_attributes
+                        .iter()
+                        .any(|attr| attr.starts_with('_')))
+            {
+                return errors;
+            }
+
+            if !docstr_attrs.iter().any(|attr| attr.starts_with('_')) {
                 let exc_lines = find_string_in_text_range(
                     file_contents,
                     &TextRange::new(TextSize::new(0), class_info.def.range.end()),
@@ -380,7 +412,6 @@ fn check_classes_for_extra_attrs_section_in_docstr(
     }
     errors
 }
-
 
 fn check_classes_for_multiple_attrs_section_in_docstr(
     class_info: &ClassInfo,
@@ -403,7 +434,7 @@ fn check_classes_for_multiple_attrs_section_in_docstr(
             return errors;
         }
         if docstring.get_attrs_sections().len() == 1 {
-            return  errors;
+            return errors;
         }
         let exc_lines = find_string_in_text_range(
             file_contents,
@@ -429,7 +460,6 @@ fn check_classes_for_multiple_attrs_section_in_docstr(
     errors
 }
 
-
 fn check_classes_for_multiple_attrs_in_docstr(
     class_info: &ClassInfo,
     file_contents: &str,
@@ -453,26 +483,25 @@ fn check_classes_for_multiple_attrs_in_docstr(
 
         let duplicates = find_duplicates(&docstring.get_attrs());
 
-        for duplicate in duplicates{
-        let exc_lines = find_string_in_text_range(
-            file_contents,
-            &TextRange::new(TextSize::new(0), class_info.def.range.end()),
-            vec![&duplicate],
-        );
-        // TODO: attribute section can be attrs instead of Attrs. Make sure the
-        // find_string_in_text_range function returns the actual found string
-        let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
+        for duplicate in duplicates {
+            let exc_lines = find_string_in_text_range(
+                file_contents,
+                &TextRange::new(TextSize::new(0), class_info.def.range.end()),
+                vec![&duplicate],
+            );
+            // TODO: attribute section can be attrs instead of Attrs. Make sure the
+            // find_string_in_text_range function returns the actual found string
+            let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
 
-        errors.push(format_problem(
-            line,
-            line_location,
-            duplicate_attr_docstr_msg(duplicate.as_str()),
-        ));
+            errors.push(format_problem(
+                line,
+                line_location,
+                duplicate_attr_docstr_msg(duplicate.as_str()),
+            ));
         }
     }
     errors
 }
-
 
 fn check_classes_for_missing_attrs_in_docstr(
     class_info: &ClassInfo,
@@ -489,7 +518,9 @@ fn check_classes_for_missing_attrs_in_docstr(
     if class_info.docstring.is_none() {
         return errors;
     }
-    let public_attributes: Vec<String> = class_info.attributes.clone()
+    let public_attributes: Vec<String> = class_info
+        .attributes
+        .clone()
         .into_iter()
         .filter(|attr| !attr.starts_with('_'))
         .collect();
@@ -544,10 +575,20 @@ fn check_classes_for_extra_attrs_in_docstr(
     if class_info.docstring.is_none() {
         return errors;
     }
-    let public_attributes: Vec<String> = class_info.attributes.clone()
-        .into_iter()
+    let mut public_attributes: HashSet<String> = class_info
+        .attributes
+        .iter()
         .filter(|attr| !attr.starts_with('_'))
+        .cloned()
         .collect();
+
+    public_attributes.extend(
+        class_info
+            .instance_attributes
+            .iter()
+            .filter(|attr| !attr.starts_with('_'))
+            .cloned(),
+    );
 
     if public_attributes.is_empty() {
         return errors;
@@ -569,7 +610,10 @@ fn check_classes_for_extra_attrs_in_docstr(
                     vec![attr.as_str()],
                 );
                 if exc_lines.is_empty() {
-                    eprintln!("Warning: Could not find docstring attribute '{}' in source", attr);
+                    eprintln!(
+                        "Warning: Could not find docstring attribute '{}' in source",
+                        attr
+                    );
                     continue;
                 }
                 let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
@@ -1867,11 +1911,6 @@ fn generate_rules_output(
             file_contents,
             is_test_file,
         ));
-
-
-
-
-
     }
     problem_functions
 }

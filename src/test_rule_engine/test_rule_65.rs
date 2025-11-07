@@ -27,9 +27,7 @@ class Class1:
     """
     attr_1 = "value 1"
 "#;
-    let expected = vec![
-        format!("4:8 {}", duplicate_attr_docstr_msg("attr_1")),
-    ];
+    let expected = vec![format!("4:8 {}", duplicate_attr_docstr_msg("attr_1"))];
     general_test(code, expected);
 }
 
@@ -45,9 +43,7 @@ class Class1:
     """
     _attr_1 = "value 1"
 "#;
-    let expected = vec![
-        format!("4:8 {}", duplicate_attr_docstr_msg("_attr_1")),
-    ];
+    let expected = vec![format!("4:8 {}", duplicate_attr_docstr_msg("_attr_1"))];
     general_test(code, expected);
 }
 
@@ -64,9 +60,7 @@ class Class1:
     """
     attr_1 = "value 1"
 "#;
-    let expected = vec![
-        format!("4:8 {}", duplicate_attr_docstr_msg("attr_1")),
-    ];
+    let expected = vec![format!("4:8 {}", duplicate_attr_docstr_msg("attr_1"))];
     general_test(code, expected);
 }
 
@@ -84,9 +78,7 @@ class Class1:
     attr_1 = "value 1"
     attr_2 = "value 2"
 "#;
-    let expected = vec![
-        format!("4:8 {}", duplicate_attr_docstr_msg("attr_1")),
-    ];
+    let expected = vec![format!("4:8 {}", duplicate_attr_docstr_msg("attr_1"))];
     general_test(code, expected);
 }
 
@@ -104,9 +96,7 @@ class Class1:
     attr_1 = "value 1"
     attr_2 = "value 2"
 "#;
-    let expected = vec![
-        format!("5:8 {}", duplicate_attr_docstr_msg("attr_2")),
-    ];
+    let expected = vec![format!("5:8 {}", duplicate_attr_docstr_msg("attr_2"))];
     general_test(code, expected);
 }
 
@@ -146,8 +136,6 @@ class Class1:
         """Docstring 2."""
         self.attr_1 = "value 1"
 "#;
-    let expected = vec![
-        format!("4:8 {}", duplicate_attr_docstr_msg("attr_1")),
-    ];
+    let expected = vec![format!("4:8 {}", duplicate_attr_docstr_msg("attr_1"))];
     general_test(code, expected);
 }
