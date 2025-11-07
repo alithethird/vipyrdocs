@@ -1,10 +1,10 @@
 use pyo3::prelude::*;
 
-mod docstring;
+pub mod docstring;
 //::{parse, Docstring, _get_sections};
 
 pub mod constants;
-mod plugin;
+pub mod plugin;
 pub mod rule_engine;
 mod test_rule_engine;
 
