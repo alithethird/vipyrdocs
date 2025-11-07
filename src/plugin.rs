@@ -283,39 +283,35 @@ impl Visitor for ReturnCollector {
 }
 struct AttributeCollector {
     pub attributes: Vec<String>,
-    class_depth: usize,
 }
 
 impl AttributeCollector {
     pub fn new() -> Self {
         Self {
             attributes: Vec::new(),
-            class_depth: 0,
         }
     }
 }
 
 impl Visitor for AttributeCollector {
-    fn visit_stmt_class_def(&mut self, node: StmtClassDef<TextRange>) {
-        self.class_depth += 1;
-        for stmt in &node.body {
-            self.visit_stmt(stmt.clone());
-        }
-        self.class_depth -= 1;
-    }
-
     fn visit_expr_attribute(&mut self, node: ExprAttribute<TextRange>) {
-        if self.class_depth == 0 {
-            self.attributes.push(node.attr.to_string());
-        }
+        self.attributes.push(node.attr.to_string());
     }
     fn visit_stmt_assign(&mut self, node: StmtAssign<TextRange>) {
         let targets = &node.targets;
-        println!("{:?}", targets);
         for target in targets {
             if target.as_name_expr().is_some() {
+                // Handle direct assignments like: attr_1 = "value"
                 let _target = target.as_name_expr().unwrap().id.clone();
                 self.attributes.push(_target.to_string());
+            } else if target.as_attribute_expr().is_some() {
+                // Handle self.attribute assignments like: self.attr_1 = "value"
+                let attr_expr = target.as_attribute_expr().unwrap();
+                if let Some(value_expr) = attr_expr.value.as_name_expr() {
+                    if value_expr.id.as_str() == "self" {
+                        self.attributes.push(attr_expr.attr.to_string());
+                    }
+                }
             }
         }
     }
@@ -323,6 +319,13 @@ impl Visitor for AttributeCollector {
         for dec in &node.decorator_list {
              if is_property(dec){
                 self.attributes.push(node.name.to_string());
+            }
+        }
+        
+        // If this is __init__, visit its body to find self.attribute assignments
+        if node.name.as_str() == "__init__" {
+            for stmt in &node.body {
+                self.visit_stmt(stmt.clone());
             }
         }
         // self.generic_visit_stmt_function_def(node);
@@ -338,32 +341,46 @@ impl Visitor for AttributeCollector {
 }
 fn is_property(decorator: &Expr) -> bool {
     let property_tag_list = ["property", "cached_property"];
-        if decorator.is_name_expr() {
-            let id = &decorator.as_name_expr().unwrap().id;
+    
+    if decorator.is_name_expr() {
+        let id = &decorator.as_name_expr().unwrap().id;
+        for property_tag in property_tag_list{
+            if id.eq_ignore_ascii_case(property_tag) {
+                return true;
+            }
+        }
+    }
+    
+    if decorator.is_call_expr() {
+        let call: &ExprCall = decorator.as_call_expr().unwrap();
+        if let Some(name_expr) = call.func.as_name_expr() {
+            let id = &name_expr.id;
             for property_tag in property_tag_list{
                 if id.eq_ignore_ascii_case(property_tag) {
                     return true;
                 }
             }
         }
-        if decorator.is_call_expr() {
-            let call: &ExprCall = decorator.as_call_expr().unwrap();
-            if let Some(name_expr) = call.func.as_name_expr() {
-                let id = &name_expr.id;
-                for property_tag in property_tag_list{
-                    if id.eq_ignore_ascii_case(property_tag) {
-                        return true;
-                    }
-                }
-            }}
-            if decorator.is_attribute_expr() {
-                let id = &decorator.as_attribute_expr().unwrap().attr;
-                for property_tag in property_tag_list{
-                    if id.eq_ignore_ascii_case(property_tag) {
-                        return true;
-                    }
+        
+        if let Some(attr_expr) = call.func.as_attribute_expr() {
+            let attr = &attr_expr.attr;
+            for property_tag in property_tag_list{
+                if attr.eq_ignore_ascii_case(property_tag) {
+                    return true;
                 }
             }
+        }
+    }
+    
+    if decorator.is_attribute_expr() {
+        let attr = &decorator.as_attribute_expr().unwrap().attr;
+        for property_tag in property_tag_list{
+            if attr.eq_ignore_ascii_case(property_tag) {
+                return true;
+            }
+        }
+    }
+    
     false
 }
 impl Visitor for DocstringCollector {
@@ -409,7 +426,6 @@ impl Visitor for DocstringCollector {
                 class_funcs.push(get_func(&FunctionDefKind::Sync(func_def.clone())));
             }
         }
-
         let class_info = ClassInfo {
             def: node.clone(),
             funcs: class_funcs,

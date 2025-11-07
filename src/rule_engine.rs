@@ -341,34 +341,43 @@ fn check_classes_for_extra_attrs_section_in_docstr(
     if class_info.docstring.is_none() {
         return errors;
     }
-    if let Some(docstring) = &class_info.docstring {
-    let public_attributes: Vec<String> = class_info.attributes.clone()
-        .into_iter()
-        .filter(|attr| !attr.starts_with('_'))
-        .collect();
-
-    let duplicates = find_duplicates(&docstring.get_attrs());
-    if !duplicates.is_empty() {
-        return errors;
-    }
-
+    
     if let Some(docstring) = &class_info.docstring {
         // Check if docstring has attrs sections
         if !docstring.has_attrs_sections() {
             return errors;
         }
-        let exc_lines = find_string_in_text_range(
-            file_contents,
-            &TextRange::new(TextSize::new(0), class_info.def.range.end()),
-            vec!["attrs", "attributes"],
-        );
-        let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
-        errors.push(format_problem(
-            line,
-            line_location,
-            attrs_section_in_docstr_msg(),
-        ));
-    }}
+        
+        let public_attributes: Vec<String> = class_info.attributes.clone()
+            .into_iter()
+            .filter(|attr| !attr.starts_with('_'))
+            .collect();
+
+        // Rule 61: If there's an attrs section but no public attributes, it's extra
+        // However, if private attributes are documented in the attrs section, 
+        // then the attrs section is justified
+        if public_attributes.is_empty() {
+            let docstr_attrs = docstring.get_attrs();
+            let private_attrs_documented = docstr_attrs.iter()
+                .any(|attr| attr.starts_with('_'));
+            
+            // Only trigger rule 61 if no public attributes AND no private attributes documented
+            if !private_attrs_documented {
+                let exc_lines = find_string_in_text_range(
+                    file_contents,
+                    &TextRange::new(TextSize::new(0), class_info.def.range.end()),
+                    vec!["attrs", "attributes"],
+                );
+                if let Some((line, line_location, _)) = exc_lines.first() {
+                    errors.push(format_problem(
+                        *line,
+                        *line_location,
+                        attrs_section_in_docstr_msg(),
+                    ));
+                }
+            }
+        }
+    }
     errors
 }
 
@@ -444,11 +453,7 @@ fn check_classes_for_multiple_attrs_in_docstr(
 
         let duplicates = find_duplicates(&docstring.get_attrs());
 
-
-        println!("###duplicates : ");
         for duplicate in duplicates{
-
-        println!("-  {}", duplicate);
         let exc_lines = find_string_in_text_range(
             file_contents,
             &TextRange::new(TextSize::new(0), class_info.def.range.end()),
@@ -457,12 +462,6 @@ fn check_classes_for_multiple_attrs_in_docstr(
         // TODO: attribute section can be attrs instead of Attrs. Make sure the
         // find_string_in_text_range function returns the actual found string
         let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
-        let joined_attribute_sections: String = exc_lines
-            .iter()
-            .map(|(_, _, third)| third)
-            .cloned()
-            .collect::<Vec<_>>()
-            .join(",");
 
         errors.push(format_problem(
             line,
@@ -507,13 +506,17 @@ fn check_classes_for_missing_attrs_in_docstr(
 
         let docstr_attrs = docstring.get_attrs();
 
-        for attr in public_attributes {
-            if !docstr_attrs.contains(&attr) {
+        for attr in &public_attributes {
+            if !docstr_attrs.contains(attr) {
                 let exc_lines = find_string_in_text_range(
                     file_contents,
                     &TextRange::new(TextSize::new(0), class_info.def.range.end()),
                     vec![attr.as_str()],
                 );
+                if exc_lines.is_empty() {
+                    eprintln!("Warning: Could not find attribute '{}' in source", attr);
+                    continue;
+                }
                 let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
                 errors.push(format_problem(
                     line,
@@ -558,13 +561,17 @@ fn check_classes_for_extra_attrs_in_docstr(
 
         let docstr_attrs = docstring.get_attrs();
 
-        for attr in docstr_attrs {
-            if !public_attributes.contains(&attr) {
+        for attr in &docstr_attrs {
+            if !public_attributes.contains(attr) {
                 let exc_lines = find_string_in_text_range(
                     file_contents,
                     &TextRange::new(TextSize::new(0), class_info.def.range.end()),
                     vec![attr.as_str()],
                 );
+                if exc_lines.is_empty() {
+                    eprintln!("Warning: Could not find docstring attribute '{}' in source", attr);
+                    continue;
+                }
                 let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
                 errors.push(format_problem(
                     line,
