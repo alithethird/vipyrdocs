@@ -29,7 +29,10 @@ class Class1:
     """
     attr_1 = "value 1"
 "#;
-    let expected = vec![format!("3:4 {}", mult_attrs_section_in_docstr_msg("Attrs,Attributes"))];
+    let expected = vec![format!(
+        "3:4 {}",
+        mult_attrs_section_in_docstr_msg("Attrs,Attributes")
+    )];
     general_test(code, expected);
 }
 
@@ -47,6 +50,9 @@ class Class1:
     """
     attr_1 = "value 1"
 "#;
-    let expected = vec![format!("3:4 {}", mult_attrs_section_in_docstr_msg("Attrs,Attrs"))];
+    let expected = vec![format!(
+        "3:4 {}",
+        mult_attrs_section_in_docstr_msg("Attrs,Attrs")
+    )];
     general_test(code, expected);
 }

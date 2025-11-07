@@ -316,7 +316,6 @@ pub fn attr_in_docstr_msg(_attribute: &str) -> String {
     )
 }
 
-
 pub fn duplicate_attr_docstr_code() -> String {
     format!("{}065", ERROR_CODE_PREFIX)
 }
@@ -330,4 +329,3 @@ pub fn duplicate_attr_docstr_msg(_attribute: &str) -> String {
         attr_in_docstr_code().to_lowercase()
     )
 }
-
