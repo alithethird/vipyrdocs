@@ -1,18 +1,18 @@
 use crate::constants::{
     arg_in_docstr_msg, arg_not_in_docstr_msg, args_section_in_docstr_msg,
-    args_section_not_in_docstr_msg, attrs_section_not_in_docstr_msg, docstr_missing_msg,
-    duplicate_arg_msg, duplicate_exc_msg, exc_in_docstr_msg, exc_not_in_docstr_msg,
-    mult_args_sections_in_docstr_msg, mult_raises_sections_in_docstr_msg,
-    mult_returns_sections_in_docstr_msg, mult_yields_sections_in_docstr_msg,
-    raises_section_in_docstr_msg, raises_section_not_in_docstr_msg, re_raise_no_exc_in_docstr_msg,
-    returns_section_in_docstr_msg, returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
-    yields_section_not_in_docstr_msg,attrs_section_in_docstr_msg,mult_attrs_section_in_docstr_msg,
-    attr_not_in_docstr_msg,attr_in_docstr_msg,
+    args_section_not_in_docstr_msg, attr_in_docstr_msg, attr_not_in_docstr_msg,
+    attrs_section_in_docstr_msg, attrs_section_not_in_docstr_msg, docstr_missing_msg,
+    duplicate_arg_msg, duplicate_attr_docstr_msg, duplicate_exc_msg, exc_in_docstr_msg,
+    exc_not_in_docstr_msg, mult_args_sections_in_docstr_msg, mult_attrs_section_in_docstr_msg,
+    mult_raises_sections_in_docstr_msg, mult_returns_sections_in_docstr_msg,
+    mult_yields_sections_in_docstr_msg, raises_section_in_docstr_msg,
+    raises_section_not_in_docstr_msg, re_raise_no_exc_in_docstr_msg, returns_section_in_docstr_msg,
+    returns_section_not_in_docstr_msg, yields_section_in_docstr_msg,
+    yields_section_not_in_docstr_msg,
 };
 use crate::plugin::{
     get_result, ClassInfo, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind,
 };
-use pyo3::prelude::*;
 use rustpython_ast::text_size::TextRange;
 use rustpython_ast::{Arguments, Expr, ExprAttribute, ExprCall, StmtRaise, StmtReturn};
 use rustpython_parser::text_size::TextSize;
@@ -47,8 +47,6 @@ pub fn lint_file(code: &str, file_name: Option<&str>) -> Vec<String> {
     apply_rules(code.as_str(), file_name)
 }
 
-#[pyfunction]
-#[pyo3(signature = (code, file_name=None))]
 pub fn apply_rules(code: &str, file_name: Option<&str>) -> Vec<String> {
     let mut output: Vec<String> = Vec::new();
 
@@ -171,11 +169,9 @@ fn check_functions_for_duplicate_arg_in_args_section(
         let docstring_args_sections = function.docstring.clone().unwrap().get_args_sections();
         let docstring_args = function.docstring.clone().unwrap().get_args();
 
-        println!("{}", function.docstring.clone().unwrap().__repr__());
         if docstring_args_sections.is_empty() {
             continue;
         }
-        println!("docstring_args: {:?}", docstring_args);
         let mut counts = HashMap::new();
 
         let mut _range = function
@@ -232,12 +228,9 @@ fn check_functions_for_extra_arg_in_args_section(
         let docstring_args_sections = function.docstring.clone().unwrap().get_args_sections();
         let docstring_args = function.docstring.clone().unwrap().get_args();
 
-        println!("{}", function.docstring.clone().unwrap().__repr__());
         if docstring_args_sections.is_empty() {
             continue;
         }
-        println!("docstring_args: {:?}", docstring_args);
-        println!("clean_args: {:?}", clean_args);
         let mut _range = function.def.range();
         // if DC022 is here we don't need to check for DC023
         if function
@@ -304,16 +297,27 @@ fn check_classes_for_attrs_section_not_in_docstr(
         return errors;
     }
 
-    if class_info.attributes.is_empty() {
+    let public_class_attributes: Vec<String> = class_info
+        .attributes
+        .iter()
+        .filter(|attr| !attr.starts_with('_'))
+        .cloned()
+        .collect();
+
+    if public_class_attributes.is_empty() {
         return errors;
     }
     if let Some(docstring) = &class_info.docstring {
         // Check if docstring has attrs sections
         if !docstring.has_attrs_sections() {
+            let attr_name = public_class_attributes
+                .first()
+                .cloned()
+                .unwrap_or_else(|| class_info.attributes.first().cloned().unwrap_or_default());
             let exc_lines = find_string_in_text_range(
                 file_contents,
                 &TextRange::new(TextSize::new(0), class_info.def.range.end()),
-                vec![class_info.attributes[0].as_str()],
+                vec![attr_name.as_str()],
             );
             let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
             errors.push(format_problem(
@@ -341,35 +345,65 @@ fn check_classes_for_extra_attrs_section_in_docstr(
     if class_info.docstring.is_none() {
         return errors;
     }
-    let public_attributes: Vec<String> = class_info.attributes.clone()
-        .into_iter()
-        .filter(|attr| !attr.starts_with('_'))
-        .collect();
-
-    if !public_attributes.is_empty() {
-        return errors;
-    }
 
     if let Some(docstring) = &class_info.docstring {
         // Check if docstring has attrs sections
         if !docstring.has_attrs_sections() {
             return errors;
         }
-        let exc_lines = find_string_in_text_range(
-            file_contents,
-            &TextRange::new(TextSize::new(0), class_info.def.range.end()),
-            vec!["attrs", "attributes"],
-        );
-        let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
-        errors.push(format_problem(
-            line,
-            line_location,
-            attrs_section_in_docstr_msg(),
-        ));
+
+        let public_class_attributes: Vec<String> = class_info
+            .attributes
+            .clone()
+            .into_iter()
+            .filter(|attr| !attr.starts_with('_'))
+            .collect();
+        let public_instance_attributes: Vec<String> = class_info
+            .instance_attributes
+            .clone()
+            .into_iter()
+            .filter(|attr| !attr.starts_with('_'))
+            .collect();
+
+        // Rule 61: If there's an attrs section but no public attributes, it's extra
+        // However, if private attributes are documented in the attrs section,
+        // then the attrs section is justified
+        if public_class_attributes.is_empty() && public_instance_attributes.is_empty() {
+            let docstr_attrs = docstring.get_attrs();
+
+            // If the docstring documents a private attribute that's actually present,
+            // treat it as a valid attribute definition so the attrs section is justified.
+            if docstr_attrs.iter().any(|attr| attr.starts_with('_'))
+                && (class_info
+                    .attributes
+                    .iter()
+                    .any(|attr| attr.starts_with('_'))
+                    || class_info
+                        .instance_attributes
+                        .iter()
+                        .any(|attr| attr.starts_with('_')))
+            {
+                return errors;
+            }
+
+            if !docstr_attrs.iter().any(|attr| attr.starts_with('_')) {
+                let exc_lines = find_string_in_text_range(
+                    file_contents,
+                    &TextRange::new(TextSize::new(0), class_info.def.range.end()),
+                    vec!["attrs", "attributes"],
+                );
+                if let Some((line, line_location, _)) = exc_lines.first() {
+                    errors.push(format_problem(
+                        *line,
+                        *line_location,
+                        attrs_section_in_docstr_msg(),
+                    ));
+                }
+            }
+        }
     }
     errors
 }
-
 
 fn check_classes_for_multiple_attrs_section_in_docstr(
     class_info: &ClassInfo,
@@ -392,7 +426,7 @@ fn check_classes_for_multiple_attrs_section_in_docstr(
             return errors;
         }
         if docstring.get_attrs_sections().len() == 1 {
-            return  errors;
+            return errors;
         }
         let exc_lines = find_string_in_text_range(
             file_contents,
@@ -417,6 +451,50 @@ fn check_classes_for_multiple_attrs_section_in_docstr(
     }
     errors
 }
+
+fn check_classes_for_multiple_attrs_in_docstr(
+    class_info: &ClassInfo,
+    file_contents: &str,
+    is_test_file: bool,
+) -> Vec<String> {
+    let mut errors = Vec::new();
+
+    // Skip if this is a test file (similar pattern to other rules)
+    if is_test_file {
+        return errors;
+    }
+
+    if class_info.docstring.is_none() {
+        return errors;
+    }
+    if let Some(docstring) = &class_info.docstring {
+        // Check if docstring has attrs sections
+        if !docstring.has_attrs_sections() {
+            return errors;
+        }
+
+        let duplicates = find_duplicates(&docstring.get_attrs());
+
+        for duplicate in duplicates {
+            let exc_lines = find_string_in_text_range(
+                file_contents,
+                &TextRange::new(TextSize::new(0), class_info.def.range.end()),
+                vec![&duplicate],
+            );
+            // TODO: attribute section can be attrs instead of Attrs. Make sure the
+            // find_string_in_text_range function returns the actual found string
+            let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
+
+            errors.push(format_problem(
+                line,
+                line_location,
+                duplicate_attr_docstr_msg(duplicate.as_str()),
+            ));
+        }
+    }
+    errors
+}
+
 fn check_classes_for_missing_attrs_in_docstr(
     class_info: &ClassInfo,
     file_contents: &str,
@@ -432,7 +510,9 @@ fn check_classes_for_missing_attrs_in_docstr(
     if class_info.docstring.is_none() {
         return errors;
     }
-    let public_attributes: Vec<String> = class_info.attributes.clone()
+    let public_attributes: Vec<String> = class_info
+        .attributes
+        .clone()
         .into_iter()
         .filter(|attr| !attr.starts_with('_'))
         .collect();
@@ -449,13 +529,17 @@ fn check_classes_for_missing_attrs_in_docstr(
 
         let docstr_attrs = docstring.get_attrs();
 
-        for attr in public_attributes {
-            if !docstr_attrs.contains(&attr) {
+        for attr in &public_attributes {
+            if !docstr_attrs.contains(attr) {
                 let exc_lines = find_string_in_text_range(
                     file_contents,
                     &TextRange::new(TextSize::new(0), class_info.def.range.end()),
                     vec![attr.as_str()],
                 );
+                if exc_lines.is_empty() {
+                    eprintln!("Warning: Could not find attribute '{}' in source", attr);
+                    continue;
+                }
                 let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
                 errors.push(format_problem(
                     line,
@@ -483,10 +567,20 @@ fn check_classes_for_extra_attrs_in_docstr(
     if class_info.docstring.is_none() {
         return errors;
     }
-    let public_attributes: Vec<String> = class_info.attributes.clone()
-        .into_iter()
+    let mut public_attributes: HashSet<String> = class_info
+        .attributes
+        .iter()
         .filter(|attr| !attr.starts_with('_'))
+        .cloned()
         .collect();
+
+    public_attributes.extend(
+        class_info
+            .instance_attributes
+            .iter()
+            .filter(|attr| !attr.starts_with('_'))
+            .cloned(),
+    );
 
     if public_attributes.is_empty() {
         return errors;
@@ -500,13 +594,20 @@ fn check_classes_for_extra_attrs_in_docstr(
 
         let docstr_attrs = docstring.get_attrs();
 
-        for attr in docstr_attrs {
-            if !public_attributes.contains(&attr) {
+        for attr in &docstr_attrs {
+            if !public_attributes.contains(attr) {
                 let exc_lines = find_string_in_text_range(
                     file_contents,
                     &TextRange::new(TextSize::new(0), class_info.def.range.end()),
                     vec![attr.as_str()],
                 );
+                if exc_lines.is_empty() {
+                    eprintln!(
+                        "Warning: Could not find docstring attribute '{}' in source",
+                        attr
+                    );
+                    continue;
+                }
                 let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
                 errors.push(format_problem(
                     line,
@@ -853,13 +954,9 @@ fn check_functions_for_missing_arg_in_args_section(
 
         let docstring_args_sections = function.docstring.clone().unwrap().get_args_sections();
         let docstring_args = function.docstring.clone().unwrap().get_args();
-
-        println!("{}", function.docstring.clone().unwrap().__repr__());
         if docstring_args_sections.is_empty() {
             continue;
         }
-        println!("docstring_args: {:?}", docstring_args);
-        println!("clean_args: {:?}", clean_args);
         let mut _range = function.def.range();
         // if DC022 is here we don't need to check for DC023
         if function
@@ -924,10 +1021,6 @@ fn is_arg_in_docstring(
     _range: &TextRange,
     file_contents: &str,
 ) -> Option<String> {
-    println!(
-        "arg: {}, docstring_args: {:?}, contains",
-        arg_name, docstring_args
-    );
     if !docstring_args.contains(&arg_name) {
         let args_lines = find_string_in_text_range(file_contents, _range, vec![arg_name.as_str()]);
         let (line, line_location, _) = args_lines.first().unwrap().to_owned();
@@ -976,7 +1069,6 @@ fn check_functions_for_multiple_args_section(
                 _range,
                 vec!["Args:", "Arguments:", "Parameters:"],
             );
-            println!("args_lines: {:?}", args_lines);
             if args_lines.len() < 2 {
                 continue;
             }
@@ -1169,55 +1261,53 @@ fn check_functions_for_extra_args_section(
 
 fn cleanse_args(args: &Arguments, del_private_args: bool) -> Arguments {
     let mut clean_args: Arguments = args.clone();
-    if args.vararg.is_some() {
-        let arg_name = args.vararg.clone().unwrap().arg.trim().to_owned();
-        if arg_name == "self" {
+
+    if let Some(vararg) = clean_args.vararg.clone() {
+        let arg_name = vararg.arg.trim();
+        let should_drop =
+            matches!(arg_name, "self" | "cls") || (del_private_args && arg_name.starts_with('_'));
+        if should_drop {
             clean_args.vararg = None;
-        }
-        if arg_name == "cls" {
-            clean_args.vararg = None;
-        }
-        if del_private_args && arg_name.starts_with("_") {
-            clean_args.vararg = None;
-        }
-    }
-    if args.kwarg.is_some() {
-        let arg_name = args.kwarg.clone().unwrap().arg.trim().to_owned();
-        if del_private_args && arg_name.starts_with("_") {
-            clean_args.kwarg = None;
-        }
-    }
-    for (index, arg) in args.args.iter().enumerate() {
-        let arg_name = arg.def.arg.trim();
-        if arg_name == "self" {
-            clean_args.args.remove(index);
-        }
-        if arg_name == "cls" {
-            clean_args.args.remove(index);
-        }
-        if del_private_args && arg_name.starts_with("_") {
-            clean_args.args.remove(index);
         }
     }
 
-    for (index, arg) in args.kwonlyargs.iter().enumerate() {
-        let arg_name = arg.def.arg.trim();
-        if del_private_args && arg_name.starts_with("_") {
-            clean_args.kwonlyargs.remove(index);
+    if let Some(kwarg) = clean_args.kwarg.clone() {
+        let arg_name = kwarg.arg.trim();
+        if del_private_args && arg_name.starts_with('_') {
+            clean_args.kwarg = None;
         }
     }
-    for (index, arg) in args.posonlyargs.iter().enumerate() {
+
+    clean_args.args.retain(|arg| {
         let arg_name = arg.def.arg.trim();
-        if arg_name == "self" {
-            clean_args.posonlyargs.remove(index);
+        if matches!(arg_name, "self" | "cls") {
+            return false;
         }
-        if arg_name == "cls" {
-            clean_args.posonlyargs.remove(index);
+        if del_private_args && arg_name.starts_with('_') {
+            return false;
         }
-        if del_private_args && arg_name.starts_with("_") {
-            clean_args.posonlyargs.remove(index);
+        true
+    });
+
+    clean_args.kwonlyargs.retain(|arg| {
+        let arg_name = arg.def.arg.trim();
+        if del_private_args && arg_name.starts_with('_') {
+            return false;
         }
-    }
+        true
+    });
+
+    clean_args.posonlyargs.retain(|arg| {
+        let arg_name = arg.def.arg.trim();
+        if matches!(arg_name, "self" | "cls") {
+            return false;
+        }
+        if del_private_args && arg_name.starts_with('_') {
+            return false;
+        }
+        true
+    });
+
     clean_args
 }
 
@@ -1796,10 +1886,12 @@ fn generate_rules_output(
             is_test_file,
         ));
 
-
-
-
-
+        // DC065: Attribute documented multiple times
+        problem_functions.extend(check_classes_for_multiple_attrs_in_docstr(
+            class_info,
+            file_contents,
+            is_test_file,
+        ));
     }
     problem_functions
 }

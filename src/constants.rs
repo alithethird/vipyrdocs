@@ -1,5 +1,5 @@
 pub const ERROR_CODE_PREFIX: &str = "D";
-pub const MORE_INFO_BASE: &str = " (more info: https://example.com/";
+pub const MORE_INFO_BASE: &str = ""; //" (more info: https://example.com/";
 
 pub fn docstr_missing_code() -> String {
     format!("{}010", ERROR_CODE_PREFIX)
@@ -310,6 +310,20 @@ pub fn attr_in_docstr_msg(_attribute: &str) -> String {
     format!(
         "{} {} attribute should not be described in the docstring {}{}",
         attr_in_docstr_code(),
+        _attribute,
+        MORE_INFO_BASE,
+        attr_in_docstr_code().to_lowercase()
+    )
+}
+
+pub fn duplicate_attr_docstr_code() -> String {
+    format!("{}065", ERROR_CODE_PREFIX)
+}
+
+pub fn duplicate_attr_docstr_msg(_attribute: &str) -> String {
+    format!(
+        "{} {} attribute documented multiple times {}{}",
+        duplicate_attr_docstr_code(),
         _attribute,
         MORE_INFO_BASE,
         attr_in_docstr_code().to_lowercase()

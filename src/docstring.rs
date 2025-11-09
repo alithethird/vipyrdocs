@@ -1,11 +1,11 @@
-use pyo3::prelude::*;
-
 use regex::Regex;
 use rustpython_ast::text_size::TextRange;
+#[cfg(test)]
+use rustpython_ast::text_size::TextSize;
 use rustpython_ast::ExprConstant;
-use rustpython_ast::TextSize;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fmt;
 
 lazy_static::lazy_static! {
     static ref _SECTION_NAMES: HashMap<&'static str, HashSet<&'static str>> = {
@@ -25,48 +25,16 @@ lazy_static::lazy_static! {
 }
 
 lazy_static::lazy_static! {
-    static ref _SUB_SECTION_PATTERN : regex::Regex = regex::Regex::new(r"\s*(\w+)( \(.*\))?:").unwrap();
+    static ref _SUB_SECTION_PATTERN: Regex = Regex::new(r"\s*(\w+)( \(.*\))?:").unwrap();
 }
 
-#[pyclass]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct _Section {
     name: Option<String>,
     subs: Vec<String>,
 }
 
-#[pymethods]
-impl _Section {
-    #[new]
-    #[pyo3(signature = (name=None, subs=None))]
-    fn new(name: Option<String>, subs: Option<Vec<String>>) -> Self {
-        let subsections = subs.unwrap_or_else(|| vec![]);
-        _Section {
-            name,
-            subs: subsections,
-        }
-    }
-    fn __eq__(&self, other: &Self) -> PyResult<bool> {
-        let mut self_subs = self.subs.clone();
-        let mut other_subs = other.subs.clone();
-        self_subs.sort();
-        other_subs.sort();
-
-        Ok(self.name == other.name && self_subs == other_subs)
-    }
-
-    fn __repr__(&self) -> String {
-        let name_str = match &self.name {
-            Some(name) => format!("\"{}\"", name),
-            None => "None".to_string(),
-        };
-        let subs_str = format!("{:?}", self.subs);
-        format!("_Section(name={}, subs={})", name_str, subs_str)
-    }
-}
-
-#[pyclass]
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct Docstring {
     args: Option<Vec<String>>,
     args_sections: Option<Vec<String>>,
@@ -104,182 +72,125 @@ impl Docstring {
         }
     }
 
-    fn __eq__(&self, other: &Docstring) -> PyResult<bool> {
+    pub fn has_returns(&self) -> bool {
+        self.returns_sections
+            .as_ref()
+            .map(|sections| !sections.is_empty())
+            .unwrap_or(false)
+    }
+
+    pub fn get_returns(&self) -> Vec<String> {
+        self.returns_sections.clone().unwrap_or_default()
+    }
+
+    pub fn has_raises_sections(&self) -> bool {
+        self.raises_sections
+            .as_ref()
+            .map(|sections| !sections.is_empty())
+            .unwrap_or(false)
+    }
+
+    pub fn get_raises(&self) -> Vec<String> {
+        self.raises.clone().unwrap_or_default()
+    }
+
+    pub fn get_raises_sections(&self) -> Vec<String> {
+        self.raises_sections.clone().unwrap_or_default()
+    }
+
+    pub fn has_yields(&self) -> bool {
+        self.yields_sections
+            .as_ref()
+            .map(|sections| !sections.is_empty())
+            .unwrap_or(false)
+    }
+
+    pub fn get_yields(&self) -> Vec<String> {
+        self.yields_sections.clone().unwrap_or_default()
+    }
+
+    pub fn has_args_sections(&self) -> bool {
+        self.args_sections
+            .as_ref()
+            .map(|sections| !sections.is_empty())
+            .unwrap_or(false)
+    }
+
+    pub fn get_args_sections(&self) -> Vec<String> {
+        self.args_sections.clone().unwrap_or_default()
+    }
+
+    pub fn has_args(&self) -> bool {
+        self.args
+            .as_ref()
+            .map(|args| !args.is_empty())
+            .unwrap_or(false)
+    }
+
+    pub fn get_args(&self) -> Vec<String> {
+        self.args.clone().unwrap_or_default()
+    }
+
+    pub fn get_range(&self) -> TextRange {
+        self.range
+    }
+
+    pub fn has_attrs_sections(&self) -> bool {
+        self.attrs_sections
+            .as_ref()
+            .map(|sections| !sections.is_empty())
+            .unwrap_or(false)
+    }
+
+    pub fn get_attrs(&self) -> Vec<String> {
+        self.attrs.clone().unwrap_or_default()
+    }
+
+    pub fn get_attrs_sections(&self) -> Vec<String> {
+        self.attrs_sections.clone().unwrap_or_default()
+    }
+}
+
+impl PartialEq for Docstring {
+    fn eq(&self, other: &Self) -> bool {
         fn sorted(opt: &Option<Vec<String>>) -> Vec<String> {
             let mut v = opt.clone().unwrap_or_default();
             v.sort();
             v
         }
 
-        Ok(sorted(&self.args) == sorted(&other.args)
+        sorted(&self.args) == sorted(&other.args)
             && sorted(&self.args_sections) == sorted(&other.args_sections)
             && sorted(&self.attrs) == sorted(&other.attrs)
             && sorted(&self.attrs_sections) == sorted(&other.attrs_sections)
             && sorted(&self.returns_sections) == sorted(&other.returns_sections)
             && sorted(&self.yields_sections) == sorted(&other.yields_sections)
             && sorted(&self.raises) == sorted(&other.raises)
-            && sorted(&self.raises_sections) == sorted(&other.raises_sections))
-    }
-    pub fn __repr__(&self) -> String {
-        format!(
-        "Docstring(\n  args={:?},\n  args_sections={:?},\n  attrs={:?},\n  attrs_sections={:?},\n  returns_sections={:?},\n  yields_sections={:?},\n  raises={:?},\n  raises_sections={:?},\n range={:?})",
-        self.args,
-        self.args_sections,
-        self.attrs,
-        self.attrs_sections,
-        self.returns_sections,
-        self.yields_sections,
-        self.raises,
-        self.raises_sections,
-        self.range,
-    )
-    }
-
-    pub fn is_empty(&self) -> bool {
-        if self.args.is_some()
-            || self.args_sections.is_some()
-            || self.attrs.is_some()
-            || self.attrs_sections.is_some()
-            || self.returns_sections.is_some()
-            || self.yields_sections.is_some()
-            || self.raises.is_some()
-            || self.raises_sections.is_some()
-        {
-            return false;
-        }
-        true
-    }
-
-    pub fn has_returns(&self) -> bool {
-        if self.returns_sections.is_none() {
-            return false;
-        }
-        if self.returns_sections.clone().unwrap().is_empty() {
-            return false;
-        }
-        true
-    }
-    pub fn get_returns(&self) -> Vec<String> {
-        if self.returns_sections.is_none() {
-            return Vec::<String>::new();
-        }
-        self.returns_sections.clone().unwrap()
-    }
-
-    pub fn has_raises(&self) -> bool {
-        if self.raises.is_none() {
-            return false;
-        }
-        if self.raises.clone().unwrap().is_empty() {
-            return false;
-        }
-        true
-    }
-    pub fn has_raises_sections(&self) -> bool {
-        if self.raises_sections.is_none() {
-            return false;
-        }
-        if self.raises_sections.clone().unwrap().is_empty() {
-            return false;
-        }
-        true
-    }
-    pub fn get_raises(&self) -> Vec<String> {
-        if self.raises.is_none() {
-            return Vec::<String>::new();
-        }
-        self.raises.clone().unwrap()
-    }
-    pub fn get_raises_sections(&self) -> Vec<String> {
-        if self.raises_sections.is_none() {
-            return Vec::<String>::new();
-        }
-        self.raises_sections.clone().unwrap()
-    }
-
-    pub fn has_yields(&self) -> bool {
-        if self.yields_sections.is_none() {
-            return false;
-        }
-        if self.yields_sections.clone().unwrap().is_empty() {
-            return false;
-        }
-        true
-    }
-    pub fn get_yields(&self) -> Vec<String> {
-        if self.yields_sections.is_none() {
-            return Vec::<String>::new();
-        }
-        self.yields_sections.clone().unwrap()
-    }
-    pub fn has_args_sections(&self) -> bool {
-        if self.args_sections.is_none() {
-            return false;
-        }
-        if self.args_sections.clone().unwrap().is_empty() {
-            return false;
-        }
-        true
-    }
-    pub fn get_args_sections(&self) -> Vec<String> {
-        if self.args_sections.is_none() {
-            return Vec::<String>::new();
-        }
-        self.args_sections.clone().unwrap()
-    }
-    pub fn has_args(&self) -> bool {
-        if self.args.is_none() {
-            return false;
-        }
-        if self.args.clone().unwrap().is_empty() {
-            return false;
-        }
-        true
-    }
-    pub fn get_args(&self) -> Vec<String> {
-        if self.args.is_none() {
-            return Vec::<String>::new();
-        }
-        self.args.clone().unwrap()
-    }
-    pub fn get_range(&self) -> TextRange {
-        self.range
-    }
-
-    pub fn has_attrs(&self) -> bool {
-        if self.attrs.is_none() {
-            return false;
-        }
-        if self.attrs.clone().unwrap().is_empty() {
-            return false;
-        }
-        true
-    }
-    pub fn has_attrs_sections(&self) -> bool {
-        if self.attrs_sections.is_none() {
-            return false;
-        }
-
-        if self.attrs_sections.clone().unwrap().is_empty() {
-            return false;
-        }
-        true
-    }
-    pub fn get_attrs(&self) -> Vec<String> {
-        if self.attrs.is_none() {
-            return Vec::<String>::new();
-        }
-        self.attrs.clone().unwrap()
-    }
-    pub fn get_attrs_sections(&self) -> Vec<String> {
-        if self.attrs_sections.is_none() {
-            return Vec::<String>::new();
-        }
-        self.attrs_sections.clone().unwrap()
+            && sorted(&self.raises_sections) == sorted(&other.raises_sections)
+            && self.range == other.range
     }
 }
 
-#[pyfunction]
+impl Eq for Docstring {}
+
+impl fmt::Display for Docstring {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Docstring(\n  args={:?},\n  args_sections={:?},\n  attrs={:?},\n  attrs_sections={:?},\n  returns_sections={:?},\n  yields_sections={:?},\n  raises={:?},\n  raises_sections={:?},\n range={:?})",
+            self.args,
+            self.args_sections,
+            self.attrs,
+            self.attrs_sections,
+            self.returns_sections,
+            self.yields_sections,
+            self.raises,
+            self.raises_sections,
+            self.range,
+        )
+    }
+}
+
 pub fn _get_sections(lines: Vec<String>) -> Vec<_Section> {
     let cleaned_lines: Vec<String> = lines
         .into_iter()
@@ -313,14 +224,18 @@ pub fn _get_sections(lines: Vec<String>) -> Vec<_Section> {
             section_lines.push(lines.next().unwrap());
         }
 
-        let subs = section_lines
-            .iter()
-            .filter_map(|line| {
-                _SUB_SECTION_PATTERN
-                    .captures(line)
-                    .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
-            })
-            .collect();
+        // Extract subsections, handling multi-line descriptions
+        let mut subs: Vec<String> = Vec::new();
+        for line in section_lines.iter() {
+            // Check if this line starts a new subsection
+            if let Some(caps) = _SUB_SECTION_PATTERN.captures(line) {
+                if let Some(sub_name) = caps.get(1).map(|m| m.as_str().to_string()) {
+                    subs.push(sub_name);
+                }
+            }
+            // Otherwise, it's a continuation line for the previous subsection - we just skip it
+            // (the description is not stored, only the subsection names)
+        }
 
         sections.push(_Section {
             name: section_name,
@@ -367,7 +282,10 @@ fn _get_all_section_names_by_name<'a>(name: &str, sections: &'a [_Section]) -> O
 pub fn parse(constant_expr: &ExprConstant) -> Docstring {
     let value = constant_expr.clone().value.expect_str();
     let sections = _get_sections(value.lines().map(|line| line.to_string()).collect());
+    build_docstring_from_sections(sections, constant_expr.range)
+}
 
+fn build_docstring_from_sections(sections: Vec<_Section>, range: TextRange) -> Docstring {
     let args_section = _get_section_by_name("args", &sections);
     let attrs_section = _get_section_by_name("attrs", &sections);
     let raises_section = _get_section_by_name("raises", &sections);
@@ -381,147 +299,15 @@ pub fn parse(constant_expr: &ExprConstant) -> Docstring {
         _get_all_section_names_by_name("yields", &sections),
         raises_section.map(|s| s.subs.clone()),
         _get_all_section_names_by_name("raises", &sections),
-        constant_expr.range,
+        range,
     )
 }
 
-////////// Tests
+#[cfg(test)]
+mod tests;
 
-struct TestInput {
-    input: Vec<String>,
-    expected: Option<Vec<_Section>>,
-}
-
-struct TestParseInput {
-    input: String,
-    expected: Docstring,
-}
-
-#[test]
-pub fn test_get_sections() {
-    let test_inputs = [
-        TestInput {
-            input: vec!["".to_string()],
-            expected: None,
-        },
-        TestInput {
-            input: vec![" ".to_string()],
-            expected: None,
-        },
-        TestInput {
-            input: vec!["\t".to_string()],
-            expected: None,
-        },
-        TestInput {
-            input: vec!["line 1".to_string()],
-            expected: Some(vec![_Section {
-                name: None,
-                subs: vec![],
-            }]),
-        },
-        TestInput {
-            input: vec!["line 1".to_string(), "line 2".to_string()],
-            expected: Some(vec![_Section {
-                name: None,
-                subs: vec![],
-            }]),
-        },
-        TestInput {
-            input: vec!["line 1".to_string(), "name_1:".to_string()],
-            expected: Some(vec![_Section {
-                name: None,
-                subs: vec!["name_1".to_string()],
-            }]),
-        },
-        TestInput {
-            input: vec!["line 1:".to_string()],
-            expected: Some(vec![_Section {
-                name: None,
-                subs: vec![],
-            }]),
-        },
-        TestInput {
-            input: vec!["name_1:".to_string()],
-            expected: Some(vec![_Section {
-                name: Some("name_1".to_string()),
-                subs: vec![],
-            }]),
-        },
-        TestInput {
-            input: vec![" name_1:".to_string()],
-            expected: Some(vec![_Section {
-                name: Some("name_1".to_string()),
-                subs: vec![],
-            }]),
-        },
-        TestInput {
-            input: vec!["\tname_1:".to_string()],
-            expected: Some(vec![_Section {
-                name: Some("name_1".to_string()),
-                subs: vec![],
-            }]),
-        },
-        TestInput {
-            input: vec!["  name_1:".to_string()],
-            expected: Some(vec![_Section {
-                name: Some("name_1".to_string()),
-                subs: vec![],
-            }]),
-        },
-        TestInput {
-            input: vec!["name_1: ".to_string()],
-            expected: Some(vec![_Section {
-                name: Some("name_1".to_string()),
-                subs: vec![],
-            }]),
-        },
-        TestInput {
-            input: vec!["name_1: description".to_string()],
-            expected: Some(vec![_Section {
-                name: Some("name_1".to_string()),
-                subs: vec![],
-            }]),
-        },
-    ];
-
-    for input in test_inputs.iter() {
-        let returned_sections = _get_sections(input.input.clone());
-
-        println!("Line: {:?}", input.input);
-        println!(
-            "||| Comparing: {:?} with {:?}",
-            returned_sections, input.expected
-        );
-
-        match (&returned_sections.is_empty(), &input.expected) {
-            (true, None) => {
-                // Both are empty, test passes
-                println!("Test passed for input: {:?}\n\n\n", input.input);
-            }
-            (false, Some(expected_sections)) => {
-                // compare the element size
-                assert_eq!(
-                    returned_sections.len(),
-                    expected_sections.len(),
-                    "Length mismatch for input: {:?}. Returned: {:?}, Expected: {:?}\n\n\n",
-                    input.input,
-                    returned_sections,
-                    expected_sections
-                );
-
-                // Compare the vectors element by element
-                for (returned, expected) in returned_sections.iter().zip(expected_sections.iter()) {
-                    println!("Returned: {:?}\nExpected: {:?}\n\n\n", returned, expected);
-                    assert_eq!(returned, expected);
-                }
-            }
-            _ => {
-                // Mismatch between returned and expected
-                panic!(
-                    "Test failed for input: {:?}. Returned: {:?}, Expected: {:?}",
-                    input.input, returned_sections, input.expected
-                );
-            }
-        }
-    }
+#[cfg(test)]
+pub(crate) fn parse_from_str_for_tests(value: &str) -> Docstring {
+    let sections = _get_sections(value.lines().map(|line| line.to_string()).collect());
+    build_docstring_from_sections(sections, TextRange::new(TextSize::new(0), TextSize::new(0)))
 }
