@@ -76,6 +76,8 @@ fn main() {
     let cli = Cli::parse();
 
     let mut files_scanned = 0usize;
+    let mut files_with_issues = 0usize;
+    let mut total_issue_count = 0usize;
     let mut any_missing_paths = false;
 
     for path in cli.paths {
@@ -123,6 +125,9 @@ fn main() {
                 issues_found = true;
             }
 
+            files_with_issues += 1;
+            total_issue_count += output.len();
+
             println!("  🚨 {}:", file_str);
             for line in output {
                 println!("  - {}", line);
@@ -138,5 +143,17 @@ fn main() {
 
     if files_scanned == 0 && !any_missing_paths {
         println!("⚠️ No Python files scanned.");
+        return;
+    }
+
+    if files_scanned > 0 {
+        println!(
+            "📊 Summary: scanned {} file{}; {} had issues; {} issue{} total.",
+            files_scanned,
+            if files_scanned == 1 { "" } else { "s" },
+            files_with_issues,
+            total_issue_count,
+            if total_issue_count == 1 { "" } else { "s" }
+        );
     }
 }
