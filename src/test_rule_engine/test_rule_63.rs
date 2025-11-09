@@ -187,9 +187,7 @@ class Class1:
     _attr_1 = "value 1"
     attr_2 = "value 2"
 "#;
-    let expected = vec![
-        format!("6:4 {}", attr_not_in_docstr_msg("attr_2")),
-    ];
+    let expected = vec![format!("6:4 {}", attr_not_in_docstr_msg("attr_2"))];
     general_test(code, expected);
 }
 
@@ -204,8 +202,6 @@ class Class1:
     attr_1 = "value 1"
     _attr_2 = "value 2"
 "#;
-    let expected = vec![
-        format!("5:4 {}", attr_not_in_docstr_msg("attr_1")),
-    ];
+    let expected = vec![format!("5:4 {}", attr_not_in_docstr_msg("attr_1"))];
     general_test(code, expected);
 }

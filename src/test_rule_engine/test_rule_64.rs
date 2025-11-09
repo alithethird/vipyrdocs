@@ -1,5 +1,5 @@
 #[cfg(test)]
-use crate::constants::{attr_not_in_docstr_msg, attr_in_docstr_msg};
+use crate::constants::{attr_in_docstr_msg, attr_not_in_docstr_msg};
 use crate::rule_engine::lint_file;
 
 fn general_test(code: &str, expected: Vec<String>) {
@@ -26,8 +26,10 @@ class Class1:
     """
     attr_1 = "value 1"
 "#;
-    let expected = vec![format!("6:4 {}", attr_not_in_docstr_msg("attr_1")),
-                        format!("4:8 {}", attr_in_docstr_msg("attr_2"))];
+    let expected = vec![
+        format!("6:4 {}", attr_not_in_docstr_msg("attr_1")),
+        format!("4:8 {}", attr_in_docstr_msg("attr_2")),
+    ];
     general_test(code, expected);
 }
 #[test]

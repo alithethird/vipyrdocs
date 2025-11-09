@@ -1,10 +1,14 @@
 use crate::docstring;
 use crate::docstring::Docstring;
 use rustpython_ast::text_size::TextRange;
-use rustpython_ast::{Arguments, ExprAttribute, ExprCall, ExprYield, ExprYieldFrom, Stmt, StmtAssign, StmtAsyncFunctionDef, StmtClassDef, StmtFunctionDef, StmtRaise, StmtReturn, Visitor};
+use rustpython_ast::{
+    Arguments, Expr, ExprAttribute, ExprCall, ExprYield, ExprYieldFrom, Stmt, StmtAnnAssign,
+    StmtAssign, StmtAsyncFunctionDef, StmtAugAssign, StmtClassDef, StmtFunctionDef, StmtRaise,
+    StmtReturn, Visitor,
+};
 use rustpython_parser::{parse, Mode};
 
-use rustpython_ast::Expr;
+use std::collections::HashSet;
 
 pub fn get_result(code: &str, filename: Option<&str>) -> DocstringCollector {
     let filename = filename.unwrap_or("<embedded>");
@@ -94,6 +98,7 @@ pub struct ClassInfo {
     pub funcs: Vec<FunctionInfo>,
     pub docstring: Option<Docstring>,
     pub attributes: Vec<String>,
+    pub instance_attributes: Vec<String>,
 }
 fn get_docs(expr: &Expr<TextRange>) -> Option<Docstring> {
     if expr.is_constant_expr() {
@@ -282,89 +287,220 @@ impl Visitor for ReturnCollector {
     }
 }
 struct AttributeCollector {
-    pub attributes: Vec<String>,
-    class_depth: usize,
+    pub class_attributes: Vec<String>,
+    pub instance_attributes: Vec<String>,
+    receiver_stack: Vec<HashSet<String>>,
+    fn_depth: usize,
 }
 
 impl AttributeCollector {
     pub fn new() -> Self {
         Self {
-            attributes: Vec::new(),
-            class_depth: 0,
+            class_attributes: Vec::new(),
+            instance_attributes: Vec::new(),
+            receiver_stack: vec![HashSet::new()],
+            fn_depth: 0,
         }
+    }
+
+    fn push_receivers(&mut self, receivers: HashSet<String>) {
+        self.receiver_stack.push(receivers);
+    }
+
+    fn pop_receivers(&mut self) {
+        self.receiver_stack.pop();
+    }
+
+    fn is_tracked_receiver(&self, name: &str) -> bool {
+        self.receiver_stack
+            .iter()
+            .rev()
+            .any(|receivers| receivers.contains(name))
+    }
+
+    fn record_class_attribute(&mut self, name: String) {
+        self.class_attributes.push(name);
+    }
+
+    fn record_instance_attribute(&mut self, name: String) {
+        self.instance_attributes.push(name);
+    }
+
+    fn extract_tracked_attribute_name(&self, expr: &ExprAttribute<TextRange>) -> Option<String> {
+        if let Some(name_expr) = expr.value.as_name_expr() {
+            if self.is_tracked_receiver(name_expr.id.as_str()) {
+                return Some(expr.attr.to_string());
+            }
+        } else if let Some(inner_attr) = expr.value.as_attribute_expr() {
+            if let Some(attr) = self.extract_tracked_attribute_name(inner_attr) {
+                return Some(attr);
+            }
+        }
+        None
     }
 }
 
 impl Visitor for AttributeCollector {
-    fn visit_stmt_class_def(&mut self, node: StmtClassDef<TextRange>) {
-        self.class_depth += 1;
+    fn visit_stmt_assign(&mut self, node: StmtAssign<TextRange>) {
+        for target in &node.targets {
+            if self.fn_depth == 0 {
+                if let Some(name_expr) = target.as_name_expr() {
+                    self.record_class_attribute(name_expr.id.to_string());
+                    continue;
+                }
+            }
+
+            if let Some(attr_expr) = target.as_attribute_expr() {
+                if let Some(attr_name) = self.extract_tracked_attribute_name(attr_expr) {
+                    self.record_instance_attribute(attr_name);
+                }
+            }
+        }
+    }
+
+    fn visit_stmt_ann_assign(&mut self, node: StmtAnnAssign<TextRange>) {
+        if self.fn_depth == 0 {
+            if let Some(name_expr) = node.target.as_name_expr() {
+                self.record_class_attribute(name_expr.id.to_string());
+            }
+        }
+
+        if let Some(attr_expr) = node.target.as_attribute_expr() {
+            if let Some(attr_name) = self.extract_tracked_attribute_name(attr_expr) {
+                self.record_instance_attribute(attr_name);
+            }
+        }
+    }
+
+    fn visit_stmt_aug_assign(&mut self, node: StmtAugAssign<TextRange>) {
+        if self.fn_depth == 0 {
+            if let Some(name_expr) = node.target.as_name_expr() {
+                self.record_class_attribute(name_expr.id.to_string());
+            }
+        }
+
+        if let Some(attr_expr) = node.target.as_attribute_expr() {
+            if let Some(attr_name) = self.extract_tracked_attribute_name(attr_expr) {
+                self.record_instance_attribute(attr_name);
+            }
+        }
+    }
+
+    fn visit_stmt_function_def(&mut self, node: StmtFunctionDef<TextRange>) {
+        let was_top_level_method = self.fn_depth == 0;
+        self.fn_depth += 1;
+
+        if was_top_level_method {
+            if node.decorator_list.iter().any(|dec| is_property(dec)) {
+                self.record_class_attribute(node.name.to_string());
+            }
+
+            let mut receivers = HashSet::new();
+            if !has_decorator_named(&node.decorator_list, "staticmethod") {
+                if let Some(first_param) = first_parameter_name(&node.args) {
+                    receivers.insert(first_param);
+                }
+            }
+            self.push_receivers(receivers);
+        } else {
+            self.push_receivers(HashSet::new());
+        }
+
         for stmt in &node.body {
             self.visit_stmt(stmt.clone());
         }
-        self.class_depth -= 1;
+
+        self.pop_receivers();
+        self.fn_depth -= 1;
     }
 
-    fn visit_expr_attribute(&mut self, node: ExprAttribute<TextRange>) {
-        if self.class_depth == 0 {
-            self.attributes.push(node.attr.to_string());
-        }
-    }
-    fn visit_stmt_assign(&mut self, node: StmtAssign<TextRange>) {
-        let targets = &node.targets;
-        println!("{:?}", targets);
-        for target in targets {
-            if target.as_name_expr().is_some() {
-                let _target = target.as_name_expr().unwrap().id.clone();
-                self.attributes.push(_target.to_string());
-            }
-        }
-    }
-    fn visit_stmt_function_def(&mut self, node: StmtFunctionDef<TextRange>) {
-        for dec in &node.decorator_list {
-             if is_property(dec){
-                self.attributes.push(node.name.to_string());
-            }
-        }
-        // self.generic_visit_stmt_function_def(node);
-    }
     fn visit_stmt_async_function_def(&mut self, node: StmtAsyncFunctionDef<TextRange>) {
-        for dec in &node.decorator_list {
-            if is_property(dec){
-                self.attributes.push(node.name.to_string());
+        let was_top_level_method = self.fn_depth == 0;
+        self.fn_depth += 1;
+
+        if was_top_level_method {
+            if node.decorator_list.iter().any(|dec| is_property(dec)) {
+                self.record_class_attribute(node.name.to_string());
             }
+
+            let mut receivers = HashSet::new();
+            if !has_decorator_named(&node.decorator_list, "staticmethod") {
+                if let Some(first_param) = first_parameter_name(&node.args) {
+                    receivers.insert(first_param);
+                }
+            }
+            self.push_receivers(receivers);
+        } else {
+            self.push_receivers(HashSet::new());
         }
-        // self.generic_visit_stmt_async_function_def(node);
+
+        for stmt in &node.body {
+            self.visit_stmt(stmt.clone());
+        }
+
+        self.pop_receivers();
+        self.fn_depth -= 1;
     }
+
+    fn visit_stmt_class_def(&mut self, _node: StmtClassDef<TextRange>) {}
 }
 fn is_property(decorator: &Expr) -> bool {
-    let property_tag_list = ["property", "cached_property"];
-        if decorator.is_name_expr() {
-            let id = &decorator.as_name_expr().unwrap().id;
-            for property_tag in property_tag_list{
-                if id.eq_ignore_ascii_case(property_tag) {
-                    return true;
-                }
+    decorator_matches_any(decorator, &["property", "cached_property"])
+}
+
+fn decorator_matches_any(decorator: &Expr, names: &[&str]) -> bool {
+    names
+        .iter()
+        .any(|name| decorator_matches_name(decorator, name))
+}
+
+fn decorator_matches_name(decorator: &Expr, name: &str) -> bool {
+    if decorator.is_name_expr() {
+        return decorator
+            .as_name_expr()
+            .map(|expr| expr.id.eq_ignore_ascii_case(name))
+            .unwrap_or(false);
+    }
+
+    if decorator.is_call_expr() {
+        let call: &ExprCall = decorator.as_call_expr().unwrap();
+        if let Some(name_expr) = call.func.as_name_expr() {
+            if name_expr.id.eq_ignore_ascii_case(name) {
+                return true;
             }
         }
-        if decorator.is_call_expr() {
-            let call: &ExprCall = decorator.as_call_expr().unwrap();
-            if let Some(name_expr) = call.func.as_name_expr() {
-                let id = &name_expr.id;
-                for property_tag in property_tag_list{
-                    if id.eq_ignore_ascii_case(property_tag) {
-                        return true;
-                    }
-                }
-            }}
-            if decorator.is_attribute_expr() {
-                let id = &decorator.as_attribute_expr().unwrap().attr;
-                for property_tag in property_tag_list{
-                    if id.eq_ignore_ascii_case(property_tag) {
-                        return true;
-                    }
-                }
+
+        if let Some(attr_expr) = call.func.as_attribute_expr() {
+            if attr_expr.attr.eq_ignore_ascii_case(name) {
+                return true;
             }
+        }
+    }
+
+    if decorator.is_attribute_expr() {
+        return decorator
+            .as_attribute_expr()
+            .map(|expr| expr.attr.eq_ignore_ascii_case(name))
+            .unwrap_or(false);
+    }
+
     false
+}
+
+fn has_decorator_named(decorators: &[Expr], name: &str) -> bool {
+    decorators
+        .iter()
+        .any(|decorator| decorator_matches_name(decorator, name))
+}
+
+fn first_parameter_name(args: &Arguments) -> Option<String> {
+    if let Some(arg) = args.posonlyargs.first() {
+        return Some(arg.def.arg.to_string());
+    }
+    if let Some(arg) = args.args.first() {
+        return Some(arg.def.arg.to_string());
+    }
+    None
 }
 impl Visitor for DocstringCollector {
     fn visit_stmt_async_function_def(&mut self, node: StmtAsyncFunctionDef<TextRange>) {
@@ -409,12 +545,12 @@ impl Visitor for DocstringCollector {
                 class_funcs.push(get_func(&FunctionDefKind::Sync(func_def.clone())));
             }
         }
-
         let class_info = ClassInfo {
             def: node.clone(),
             funcs: class_funcs,
             docstring: class_docs,
-            attributes: attribute_collector.attributes,
+            attributes: attribute_collector.class_attributes,
+            instance_attributes: attribute_collector.instance_attributes,
         };
 
         self.class_infos.push(class_info);
