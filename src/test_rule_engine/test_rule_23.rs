@@ -255,3 +255,52 @@ def function_1(arg_1, arg_2):
     let expected = vec![format!("2:15 {}", arg_not_in_docstr_msg("arg_1"))];
     general_test(code, expected);
 }
+
+#[test]
+fn test_rule_23_method_has_single_arg_docstring_no_arg() {
+    let code = r#"
+class Class1:
+    """Docstring."""
+    def function_1(self, arg_1):
+        """Docstring 1.
+
+        Args:
+        """
+"#;
+    let expected = vec![format!("4:25 {}", arg_not_in_docstr_msg("arg_1"))];
+    general_test(code, expected);
+}
+
+
+#[test]
+fn test_rule_23_method_has_single_arg_docstring_no_arg_staticmethod() {
+    let code = r#"
+class Class1:
+    """Docstring."""
+    @staticmethod
+    def function_1(arg_1):
+        """Docstring 1.
+
+        Args:
+        """
+"#;
+    let expected = vec![format!("5:19 {}", arg_not_in_docstr_msg("arg_1"))];
+    general_test(code, expected);
+}
+
+
+#[test]
+fn test_rule_23_method_has_single_arg_docstring_no_arg_classmethod() {
+    let code = r#"
+class Class1:
+    """Docstring."""
+    @classmethod
+    def function_1(cls, arg_1):
+        """Docstring 1.
+
+        Args:
+        """
+"#;
+    let expected = vec![format!("5:24 {}", arg_not_in_docstr_msg("arg_1"))];
+    general_test(code, expected);
+}

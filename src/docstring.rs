@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 
 use regex::Regex;
-use rustpython_ast::text_size::TextRange;
+use rustpython_ast::text_size::{TextRange, TextSize};
 use rustpython_ast::ExprConstant;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -366,7 +366,10 @@ fn _get_all_section_names_by_name<'a>(name: &str, sections: &'a [_Section]) -> O
 pub fn parse(constant_expr: &ExprConstant) -> Docstring {
     let value = constant_expr.clone().value.expect_str();
     let sections = _get_sections(value.lines().map(|line| line.to_string()).collect());
+    build_docstring_from_sections(sections, constant_expr.range)
+}
 
+fn build_docstring_from_sections(sections: Vec<_Section>, range: TextRange) -> Docstring {
     let args_section = _get_section_by_name("args", &sections);
     let attrs_section = _get_section_by_name("attrs", &sections);
     let raises_section = _get_section_by_name("raises", &sections);
@@ -380,9 +383,15 @@ pub fn parse(constant_expr: &ExprConstant) -> Docstring {
         _get_all_section_names_by_name("yields", &sections),
         raises_section.map(|s| s.subs.clone()),
         _get_all_section_names_by_name("raises", &sections),
-        constant_expr.range,
+        range,
     )
 }
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+pub(crate) fn parse_from_str_for_tests(value: &str) -> Docstring {
+    let sections = _get_sections(value.lines().map(|line| line.to_string()).collect());
+    build_docstring_from_sections(sections, TextRange::new(TextSize::new(0), TextSize::new(0)))
+}
