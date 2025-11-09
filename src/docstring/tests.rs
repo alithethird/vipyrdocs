@@ -627,3 +627,95 @@ fn parse_extracts_expected_sections() {
         );
     }
 }
+
+#[test]
+fn test_multiline_subsections() {
+    let lines = vec![
+        "arrange: This is a very important part so".to_string(),
+        "    the arrange sentence has to be loooong.".to_string(),
+        "act: Do the test.".to_string(),
+        "assert: It better not fail.".to_string(),
+    ];
+    
+    let sections = _get_sections(lines);
+    
+    // Print for debugging
+    for section in &sections {
+        eprintln!("Section: {:?}", section);
+    }
+    
+    // The first line "arrange: ..." is treated as a section (because it's first line and matches pattern)
+    // The continuation line should not create a new subsection
+    // "act:" and "assert:" should be subsections under "arrange:"
+    assert_eq!(sections.len(), 1, "Expected 1 section"); 
+    assert_eq!(sections[0].name, Some("arrange".to_string()), "Expected section name to be 'arrange'");
+    assert_eq!(sections[0].subs.len(), 2, "Expected 2 subsections, got: {:?}", sections[0].subs);
+    assert!(sections[0].subs.contains(&"act".to_string()));
+    assert!(sections[0].subs.contains(&"assert".to_string()));
+}
+
+#[test]
+fn test_multiline_subsections_in_named_section() {
+    // Test when subsections with multi-line descriptions are within a named section
+    let lines = vec![
+        "Args:".to_string(),
+        "    arg1: This is a very long description that needs to".to_string(),
+        "        span multiple lines because it's important.".to_string(),
+        "    arg2: Short description.".to_string(),
+        "    arg3: Another long description that also".to_string(),
+        "        needs multiple lines.".to_string(),
+    ];
+    
+    let sections = _get_sections(lines);
+    
+    eprintln!("Sections: {:?}", sections);
+    
+    assert_eq!(sections.len(), 1);
+    assert_eq!(sections[0].name, Some("Args".to_string()));
+    assert_eq!(sections[0].subs.len(), 3, "Expected 3 args, got: {:?}", sections[0].subs);
+    assert!(sections[0].subs.contains(&"arg1".to_string()));
+    assert!(sections[0].subs.contains(&"arg2".to_string()));
+    assert!(sections[0].subs.contains(&"arg3".to_string()));
+}
+
+#[test]
+fn test_multiline_subsections_given_when_then() {
+    // Test the given/when/then pattern common in tests
+    let lines = vec![
+        "given: A test setup with multiple components that require".to_string(),
+        "    detailed explanation across lines.".to_string(),
+        "when: The action is performed.".to_string(),
+        "then: The expected outcome should be this specific thing that".to_string(),
+        "    also needs a detailed explanation.".to_string(),
+    ];
+    
+    let sections = _get_sections(lines);
+    
+    eprintln!("Sections: {:?}", sections);
+    
+    assert_eq!(sections.len(), 1);
+    assert_eq!(sections[0].name, Some("given".to_string()));
+    assert_eq!(sections[0].subs.len(), 2, "Expected 2 subsections, got: {:?}", sections[0].subs);
+    assert!(sections[0].subs.contains(&"when".to_string()));
+    assert!(sections[0].subs.contains(&"then".to_string()));
+}
+
+#[test]
+fn test_multiline_with_multiple_continuation_lines() {
+    // Test with multiple continuation lines for a single subsection
+    let lines = vec![
+        "Args:".to_string(),
+        "    param1: This is line 1".to_string(),
+        "        This is line 2 of the same parameter".to_string(),
+        "        And this is line 3".to_string(),
+        "    param2: Another parameter.".to_string(),
+    ];
+    
+    let sections = _get_sections(lines);
+    
+    assert_eq!(sections.len(), 1);
+    assert_eq!(sections[0].name, Some("Args".to_string()));
+    assert_eq!(sections[0].subs.len(), 2);
+    assert!(sections[0].subs.contains(&"param1".to_string()));
+    assert!(sections[0].subs.contains(&"param2".to_string()));
+}
