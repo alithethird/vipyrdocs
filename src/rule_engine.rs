@@ -2530,3 +2530,77 @@ fn should_skip(function: &FunctionInfo, is_test_file: bool) -> bool {
     }
     false
 }
+
+/// Collect inheritance information from a file for cross-file validation
+pub fn collect_inheritance_info(file_name: &str, tracker: &mut crate::inheritance::InheritanceTracker) {
+    use crate::inheritance::{AbstractMethodInfo, ConcreteMethodInfo, extract_base_classes};
+    
+    let code = read_file(file_name);
+    let collector = get_result(&code, Some(file_name));
+
+    // Process classes
+    for class_info in &collector.class_infos {
+        let class_name = class_info.def.name.to_string();
+        let base_classes = extract_base_classes(class_info);
+
+        // Process methods in the class
+        for method in &class_info.funcs {
+            let method_name = method.def.name().to_string();
+            
+            // Skip private methods
+            if method_name.starts_with("_") && method_name != "__init__" {
+                continue;
+            }
+
+            // Check if this is an abstract method
+            if is_abstractmethod(method) {
+                // Register abstract method
+                let has_returns = method.docstring.as_ref()
+                    .map(|d| d.has_returns())
+                    .unwrap_or(false);
+                let has_raises = method.docstring.as_ref()
+                    .map(|d| d.has_raises_sections())
+                    .unwrap_or(false);
+                let has_yields = method.docstring.as_ref()
+                    .map(|d| d.has_yields())
+                    .unwrap_or(false);
+
+                tracker.register_abstract_method(AbstractMethodInfo {
+                    class_name: class_name.clone(),
+                    method_name: method_name.clone(),
+                    has_returns,
+                    has_raises,
+                    has_yields,
+                    file_path: file_name.to_string(),
+                });
+            } else if !base_classes.is_empty() {
+                // This is a concrete method in a class with base classes
+                // It might be implementing an abstract method
+                let has_returns = method.docstring.as_ref()
+                    .map(|d| d.has_returns())
+                    .unwrap_or(false);
+                let has_raises = method.docstring.as_ref()
+                    .map(|d| d.has_raises_sections())
+                    .unwrap_or(false);
+                let has_yields = method.docstring.as_ref()
+                    .map(|d| d.has_yields())
+                    .unwrap_or(false);
+
+                // Get the line number
+                let (line, _) = find_line_and_column(&code, method.def.range().start().to_usize())
+                    .unwrap_or((0, 0));
+
+                tracker.register_concrete_method(ConcreteMethodInfo {
+                    class_name: class_name.clone(),
+                    method_name: method_name.clone(),
+                    base_classes: base_classes.clone(),
+                    has_returns,
+                    has_raises,
+                    has_yields,
+                    file_path: file_name.to_string(),
+                    line,
+                });
+            }
+        }
+    }
+}
