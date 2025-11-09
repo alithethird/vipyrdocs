@@ -172,11 +172,9 @@ fn check_functions_for_duplicate_arg_in_args_section(
         let docstring_args_sections = function.docstring.clone().unwrap().get_args_sections();
         let docstring_args = function.docstring.clone().unwrap().get_args();
 
-        println!("{}", function.docstring.clone().unwrap().__repr__());
         if docstring_args_sections.is_empty() {
             continue;
         }
-        println!("docstring_args: {:?}", docstring_args);
         let mut counts = HashMap::new();
 
         let mut _range = function
@@ -233,12 +231,9 @@ fn check_functions_for_extra_arg_in_args_section(
         let docstring_args_sections = function.docstring.clone().unwrap().get_args_sections();
         let docstring_args = function.docstring.clone().unwrap().get_args();
 
-        println!("{}", function.docstring.clone().unwrap().__repr__());
         if docstring_args_sections.is_empty() {
             continue;
         }
-        println!("docstring_args: {:?}", docstring_args);
-        println!("clean_args: {:?}", clean_args);
         let mut _range = function.def.range();
         // if DC022 is here we don't need to check for DC023
         if function
@@ -962,13 +957,9 @@ fn check_functions_for_missing_arg_in_args_section(
 
         let docstring_args_sections = function.docstring.clone().unwrap().get_args_sections();
         let docstring_args = function.docstring.clone().unwrap().get_args();
-
-        println!("{}", function.docstring.clone().unwrap().__repr__());
         if docstring_args_sections.is_empty() {
             continue;
         }
-        println!("docstring_args: {:?}", docstring_args);
-        println!("clean_args: {:?}", clean_args);
         let mut _range = function.def.range();
         // if DC022 is here we don't need to check for DC023
         if function
@@ -1033,10 +1024,6 @@ fn is_arg_in_docstring(
     _range: &TextRange,
     file_contents: &str,
 ) -> Option<String> {
-    println!(
-        "arg: {}, docstring_args: {:?}, contains",
-        arg_name, docstring_args
-    );
     if !docstring_args.contains(&arg_name) {
         let args_lines = find_string_in_text_range(file_contents, _range, vec![arg_name.as_str()]);
         let (line, line_location, _) = args_lines.first().unwrap().to_owned();
@@ -1085,7 +1072,6 @@ fn check_functions_for_multiple_args_section(
                 _range,
                 vec!["Args:", "Arguments:", "Parameters:"],
             );
-            println!("args_lines: {:?}", args_lines);
             if args_lines.len() < 2 {
                 continue;
             }
@@ -1278,55 +1264,53 @@ fn check_functions_for_extra_args_section(
 
 fn cleanse_args(args: &Arguments, del_private_args: bool) -> Arguments {
     let mut clean_args: Arguments = args.clone();
-    if args.vararg.is_some() {
-        let arg_name = args.vararg.clone().unwrap().arg.trim().to_owned();
-        if arg_name == "self" {
+
+    if let Some(vararg) = clean_args.vararg.clone() {
+        let arg_name = vararg.arg.trim();
+        let should_drop =
+            matches!(arg_name, "self" | "cls") || (del_private_args && arg_name.starts_with('_'));
+        if should_drop {
             clean_args.vararg = None;
-        }
-        if arg_name == "cls" {
-            clean_args.vararg = None;
-        }
-        if del_private_args && arg_name.starts_with("_") {
-            clean_args.vararg = None;
-        }
-    }
-    if args.kwarg.is_some() {
-        let arg_name = args.kwarg.clone().unwrap().arg.trim().to_owned();
-        if del_private_args && arg_name.starts_with("_") {
-            clean_args.kwarg = None;
-        }
-    }
-    for (index, arg) in args.args.iter().enumerate() {
-        let arg_name = arg.def.arg.trim();
-        if arg_name == "self" {
-            clean_args.args.remove(index);
-        }
-        if arg_name == "cls" {
-            clean_args.args.remove(index);
-        }
-        if del_private_args && arg_name.starts_with("_") {
-            clean_args.args.remove(index);
         }
     }
 
-    for (index, arg) in args.kwonlyargs.iter().enumerate() {
-        let arg_name = arg.def.arg.trim();
-        if del_private_args && arg_name.starts_with("_") {
-            clean_args.kwonlyargs.remove(index);
+    if let Some(kwarg) = clean_args.kwarg.clone() {
+        let arg_name = kwarg.arg.trim();
+        if del_private_args && arg_name.starts_with('_') {
+            clean_args.kwarg = None;
         }
     }
-    for (index, arg) in args.posonlyargs.iter().enumerate() {
+
+    clean_args.args.retain(|arg| {
         let arg_name = arg.def.arg.trim();
-        if arg_name == "self" {
-            clean_args.posonlyargs.remove(index);
+        if matches!(arg_name, "self" | "cls") {
+            return false;
         }
-        if arg_name == "cls" {
-            clean_args.posonlyargs.remove(index);
+        if del_private_args && arg_name.starts_with('_') {
+            return false;
         }
-        if del_private_args && arg_name.starts_with("_") {
-            clean_args.posonlyargs.remove(index);
+        true
+    });
+
+    clean_args.kwonlyargs.retain(|arg| {
+        let arg_name = arg.def.arg.trim();
+        if del_private_args && arg_name.starts_with('_') {
+            return false;
         }
-    }
+        true
+    });
+
+    clean_args.posonlyargs.retain(|arg| {
+        let arg_name = arg.def.arg.trim();
+        if matches!(arg_name, "self" | "cls") {
+            return false;
+        }
+        if del_private_args && arg_name.starts_with('_') {
+            return false;
+        }
+        true
+    });
+
     clean_args
 }
 

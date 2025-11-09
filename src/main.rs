@@ -32,63 +32,100 @@ Examples:
 "#
 )]
 struct Cli {
-    /// Path to a Python file or directory to check
-    path: PathBuf,
+    /// Paths to Python files or directories to check
+    #[arg(value_name = "PATH", num_args = 1..)]
+    paths: Vec<PathBuf>,
 }
 
-fn get_files_recursively(path: PathBuf) -> Vec<String> {
+fn collect_python_files(path: &Path) -> Vec<PathBuf> {
+    if path.is_file() {
+        if is_python_file(path) {
+            return vec![path.to_path_buf()];
+        }
+        return Vec::new();
+    }
+
     let mut py_files = Vec::new();
-    visit_dirs(&path, &mut py_files);
+    if path.is_dir() {
+        visit_dirs(path, &mut py_files);
+    }
     py_files
 }
 
-fn visit_dirs(dir: &Path, py_files: &mut Vec<String>) {
+fn visit_dirs(dir: &Path, py_files: &mut Vec<PathBuf>) {
     if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
                 visit_dirs(&path, py_files);
-            } else if let Some(ext) = path.extension() {
-                if ext == "py" {
-                    if let Some(path_str) = path.to_str() {
-                        py_files.push(path_str.to_string());
-                    }
-                }
+            } else if is_python_file(&path) {
+                py_files.push(path);
             }
         }
     }
 }
 
+fn is_python_file(path: &Path) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.eq_ignore_ascii_case("py"))
+        .unwrap_or(false)
+}
+
 fn main() {
     let cli = Cli::parse();
 
-    if !cli.path.exists() {
-        eprintln!("❌ Error: Path '{}' does not exist.", cli.path.display());
-        std::process::exit(1);
+    let mut files_scanned = 0usize;
+    let mut any_missing_paths = false;
+
+    for path in cli.paths {
+        if !path.exists() {
+            eprintln!("❌ Error: Path '{}' does not exist.", path.display());
+            any_missing_paths = true;
+            continue;
+        }
+
+        println!("🐍 Scanning path: {}", path.display());
+        let files = collect_python_files(&path);
+
+        if files.is_empty() {
+            if path.is_file() {
+                println!("  ⚠️ Skipping: not a Python file.");
+            } else {
+                println!("  ⚠️ No Python files found in directory.");
+            }
+            continue;
+        }
+
+        println!("🐍 Scan result:");
+        for file in files {
+            let file_str = match file.to_str() {
+                Some(value) => value.to_string(),
+                None => {
+                    eprintln!(
+                        "  ⚠️ Skipping '{}': path is not valid UTF-8.",
+                        file.display()
+                    );
+                    continue;
+                }
+            };
+
+            let output = rule_engine::lint_file("", Some(file_str.as_str()));
+            println!("{}:", file_str);
+
+            if output.is_empty() {
+                println!("  ✅ No issues found.");
+            } else {
+                for line in output {
+                    println!("  - {}", line);
+                }
+            }
+
+            files_scanned += 1;
+        }
     }
 
-    println!("🐍 Scanning path: {}", cli.path.display());
-
-    // TODO: Call your core logic here
-    // _core::check_docstrings(cli.path);
-    if cli.path.is_dir() {
-        let files = get_files_recursively(cli.path);
-
-        println!("🐍 Scan result: ");
-        for file in files {
-            let output = rule_engine::lint_file("", Some(file.as_str()));
-            println!("{}: ", file);
-
-            for line in output {
-                println!("  - {}", line);
-            }
-        }
-    } else if cli.path.is_file() {
-        let output = rule_engine::lint_file("", cli.path.to_str());
-
-        println!("🐍 Scan result: ");
-        for line in output {
-            println!("  - {}", line);
-        }
+    if files_scanned == 0 && !any_missing_paths {
+        println!("⚠️ No Python files scanned.");
     }
 }

@@ -1,5 +1,5 @@
 pub const ERROR_CODE_PREFIX: &str = "D";
-pub const MORE_INFO_BASE: &str = " (more info: https://example.com/";
+pub const MORE_INFO_BASE: &str = ""; //" (more info: https://example.com/";
 
 pub fn docstr_missing_code() -> String {
     format!("{}010", ERROR_CODE_PREFIX)
