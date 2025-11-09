@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 
 use regex::Regex;
-use rustpython_ast::text_size::TextRange;
+use rustpython_ast::text_size::{TextRange, TextSize};
 use rustpython_ast::ExprConstant;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -45,6 +45,17 @@ impl _Section {
             subs: subsections,
         }
     }
+    
+    #[getter]
+    fn name(&self) -> Option<String> {
+        self.name.clone()
+    }
+    
+    #[getter]
+    fn subs(&self) -> Vec<String> {
+        self.subs.clone()
+    }
+    
     fn __eq__(&self, other: &Self) -> PyResult<bool> {
         let mut self_subs = self.subs.clone();
         let mut other_subs = other.subs.clone();
