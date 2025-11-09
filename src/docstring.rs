@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 
 use regex::Regex;
-use rustpython_ast::text_size::{TextRange, TextSize};
+use rustpython_ast::text_size::{TextRange};
 use rustpython_ast::ExprConstant;
 use std::collections::HashMap;
 use std::collections::HashSet;
