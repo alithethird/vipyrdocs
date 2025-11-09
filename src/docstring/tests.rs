@@ -312,7 +312,11 @@ fn get_sections_handles_variety_of_inputs() {
             .map(build_section)
             .collect::<Vec<_Section>>();
 
-        assert_eq!(result, expected, "Unexpected sections for input {:?}", case.input);
+        assert_eq!(
+            result, expected,
+            "Unexpected sections for input {:?}",
+            case.input
+        );
     }
 }
 
@@ -616,6 +620,10 @@ fn parse_extracts_expected_sections() {
         let parsed = parse_from_str_for_tests(case.value);
         let expected = build_expected_docstring(&case.expected);
 
-        assert_eq!(parsed, expected, "Docstring mismatch for input: {:?}", case.value);
+        assert_eq!(
+            parsed, expected,
+            "Docstring mismatch for input: {:?}",
+            case.value
+        );
     }
 }

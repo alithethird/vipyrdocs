@@ -271,7 +271,6 @@ class Class1:
     general_test(code, expected);
 }
 
-
 #[test]
 fn test_rule_23_method_has_single_arg_docstring_no_arg_staticmethod() {
     let code = r#"
@@ -287,7 +286,6 @@ class Class1:
     let expected = vec![format!("5:19 {}", arg_not_in_docstr_msg("arg_1"))];
     general_test(code, expected);
 }
-
 
 #[test]
 fn test_rule_23_method_has_single_arg_docstring_no_arg_classmethod() {

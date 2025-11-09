@@ -98,6 +98,8 @@ fn main() {
         }
 
         println!("🐍 Scan result:");
+        let mut issues_found = false;
+
         for file in files {
             let file_str = match file.to_str() {
                 Some(value) => value.to_string(),
@@ -111,17 +113,26 @@ fn main() {
             };
 
             let output = rule_engine::lint_file("", Some(file_str.as_str()));
-            println!("{}:", file_str);
 
             if output.is_empty() {
-                println!("  ✅ No issues found.");
-            } else {
-                for line in output {
-                    println!("  - {}", line);
-                }
+                files_scanned += 1;
+                continue;
+            }
+
+            if !issues_found {
+                issues_found = true;
+            }
+
+            println!("{}:", file_str);
+            for line in output {
+                println!("  - {}", line);
             }
 
             files_scanned += 1;
+        }
+
+        if !issues_found {
+            println!("  ✅ No issues found.");
         }
     }
 
