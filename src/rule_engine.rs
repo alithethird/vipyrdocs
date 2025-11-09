@@ -1692,6 +1692,11 @@ fn check_functions_for_extra_yields_section(
             continue;
         }
 
+        // Skip abstract methods - they can have yields sections without yielding
+        if is_abstractmethod(function) {
+            continue;
+        }
+
         let yield_statements: &Vec<YieldKind> = &function.yields;
 
         if (yield_statements.len() == 1
@@ -1731,6 +1736,10 @@ fn check_functions_for_extra_raises_section(
         if function.docstring.is_none() {
             continue;
         }
+        // Skip abstract methods - they can have raises sections without raising
+        if is_abstractmethod(function) {
+            continue;
+        }
         let _docstring = function.docstring.clone().unwrap();
 
         if function.raises.is_empty() && _docstring.has_raises_sections() {
@@ -1767,6 +1776,10 @@ fn check_functions_for_extra_returns_section(
         }
         // ignore if function doesn't have docstrings
         if function.docstring.is_none() {
+            continue;
+        }
+        // Skip abstract methods - they can have returns sections without returning
+        if is_abstractmethod(function) {
             continue;
         }
         let _docstring = function.docstring.clone().unwrap();
@@ -2333,6 +2346,39 @@ fn is_overload(function: &FunctionInfo) -> bool {
             if attr.value.is_name_expr() {
                 let name = &attr.value.as_name_expr().unwrap().id;
                 if attr.attr.to_string() == "overload" && name == "typing" {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+fn is_abstractmethod(function: &FunctionInfo) -> bool {
+    for decorator in function.def.decorator_list() {
+        if decorator.is_name_expr() {
+            let id = &decorator.as_name_expr().unwrap().id;
+            if id.eq_ignore_ascii_case("abstractmethod") {
+                return true;
+            }
+        }
+
+        if decorator.is_call_expr() {
+            let call: &ExprCall = decorator.as_call_expr().unwrap();
+            if let Some(name_expr) = call.func.as_name_expr() {
+                let id = &name_expr.id;
+                if id.eq_ignore_ascii_case("abstractmethod") {
+                    return true;
+                }
+            }
+        }
+
+        if decorator.is_attribute_expr() {
+            let attr: &ExprAttribute = decorator.as_attribute_expr().unwrap();
+            if attr.value.is_name_expr() {
+                let name = &attr.value.as_name_expr().unwrap().id;
+                if (attr.attr.to_string() == "abstractmethod" && name == "abc")
+                    || (attr.attr.to_string() == "abstractmethod" && name == "ABC") {
                     return true;
                 }
             }

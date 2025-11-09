@@ -1,4 +1,5 @@
 #[cfg(test)]
+mod test_abstractmethod;
 mod test_rule_20;
 mod test_rule_21;
 mod test_rule_22;
