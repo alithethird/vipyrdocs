@@ -123,7 +123,7 @@ fn main() {
                 issues_found = true;
             }
 
-            println!("{}:", file_str);
+            println!("  🚨 {}:", file_str);
             for line in output {
                 println!("  - {}", line);
             }
