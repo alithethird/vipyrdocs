@@ -45,6 +45,17 @@ impl _Section {
             subs: subsections,
         }
     }
+    
+    #[getter]
+    fn name(&self) -> Option<String> {
+        self.name.clone()
+    }
+    
+    #[getter]
+    fn subs(&self) -> Vec<String> {
+        self.subs.clone()
+    }
+    
     fn __eq__(&self, other: &Self) -> PyResult<bool> {
         let mut self_subs = self.subs.clone();
         let mut other_subs = other.subs.clone();
@@ -312,14 +323,18 @@ pub fn _get_sections(lines: Vec<String>) -> Vec<_Section> {
             section_lines.push(lines.next().unwrap());
         }
 
-        let subs = section_lines
-            .iter()
-            .filter_map(|line| {
-                _SUB_SECTION_PATTERN
-                    .captures(line)
-                    .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
-            })
-            .collect();
+        // Extract subsections, handling multi-line descriptions
+        let mut subs: Vec<String> = Vec::new();
+        for line in section_lines.iter() {
+            // Check if this line starts a new subsection
+            if let Some(caps) = _SUB_SECTION_PATTERN.captures(line) {
+                if let Some(sub_name) = caps.get(1).map(|m| m.as_str().to_string()) {
+                    subs.push(sub_name);
+                }
+            }
+            // Otherwise, it's a continuation line for the previous subsection - we just skip it
+            // (the description is not stored, only the subsection names)
+        }
 
         sections.push(_Section {
             name: section_name,

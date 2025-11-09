@@ -30,6 +30,7 @@ fn _core(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     let submodule = PyModule::new_bound(py, "docstring")?;
     submodule.add_class::<docstring::_Section>()?;
+    submodule.add_function(wrap_pyfunction!(docstring::_get_sections, m)?)?;
 
     m.add_submodule(&submodule)?;
     let constants = PyModule::new_bound(py, "constants")?;
