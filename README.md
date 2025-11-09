@@ -19,12 +19,6 @@ Build from source with [cargo](https://www.rust-lang.org/tools/install):
 cargo install --path .
 ```
 
-Or use maturin to build a Python-compatible wheel:
-
-```
-maturin develop
-```
-
 ## 🧪 Usage
 
 ```

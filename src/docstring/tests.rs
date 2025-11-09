@@ -636,20 +636,29 @@ fn test_multiline_subsections() {
         "act: Do the test.".to_string(),
         "assert: It better not fail.".to_string(),
     ];
-    
+
     let sections = _get_sections(lines);
-    
+
     // Print for debugging
     for section in &sections {
         eprintln!("Section: {:?}", section);
     }
-    
+
     // The first line "arrange: ..." is treated as a section (because it's first line and matches pattern)
     // The continuation line should not create a new subsection
     // "act:" and "assert:" should be subsections under "arrange:"
-    assert_eq!(sections.len(), 1, "Expected 1 section"); 
-    assert_eq!(sections[0].name, Some("arrange".to_string()), "Expected section name to be 'arrange'");
-    assert_eq!(sections[0].subs.len(), 2, "Expected 2 subsections, got: {:?}", sections[0].subs);
+    assert_eq!(sections.len(), 1, "Expected 1 section");
+    assert_eq!(
+        sections[0].name,
+        Some("arrange".to_string()),
+        "Expected section name to be 'arrange'"
+    );
+    assert_eq!(
+        sections[0].subs.len(),
+        2,
+        "Expected 2 subsections, got: {:?}",
+        sections[0].subs
+    );
     assert!(sections[0].subs.contains(&"act".to_string()));
     assert!(sections[0].subs.contains(&"assert".to_string()));
 }
@@ -665,14 +674,19 @@ fn test_multiline_subsections_in_named_section() {
         "    arg3: Another long description that also".to_string(),
         "        needs multiple lines.".to_string(),
     ];
-    
+
     let sections = _get_sections(lines);
-    
+
     eprintln!("Sections: {:?}", sections);
-    
+
     assert_eq!(sections.len(), 1);
     assert_eq!(sections[0].name, Some("Args".to_string()));
-    assert_eq!(sections[0].subs.len(), 3, "Expected 3 args, got: {:?}", sections[0].subs);
+    assert_eq!(
+        sections[0].subs.len(),
+        3,
+        "Expected 3 args, got: {:?}",
+        sections[0].subs
+    );
     assert!(sections[0].subs.contains(&"arg1".to_string()));
     assert!(sections[0].subs.contains(&"arg2".to_string()));
     assert!(sections[0].subs.contains(&"arg3".to_string()));
@@ -688,14 +702,19 @@ fn test_multiline_subsections_given_when_then() {
         "then: The expected outcome should be this specific thing that".to_string(),
         "    also needs a detailed explanation.".to_string(),
     ];
-    
+
     let sections = _get_sections(lines);
-    
+
     eprintln!("Sections: {:?}", sections);
-    
+
     assert_eq!(sections.len(), 1);
     assert_eq!(sections[0].name, Some("given".to_string()));
-    assert_eq!(sections[0].subs.len(), 2, "Expected 2 subsections, got: {:?}", sections[0].subs);
+    assert_eq!(
+        sections[0].subs.len(),
+        2,
+        "Expected 2 subsections, got: {:?}",
+        sections[0].subs
+    );
     assert!(sections[0].subs.contains(&"when".to_string()));
     assert!(sections[0].subs.contains(&"then".to_string()));
 }
@@ -710,9 +729,9 @@ fn test_multiline_with_multiple_continuation_lines() {
         "        And this is line 3".to_string(),
         "    param2: Another parameter.".to_string(),
     ];
-    
+
     let sections = _get_sections(lines);
-    
+
     assert_eq!(sections.len(), 1);
     assert_eq!(sections[0].name, Some("Args".to_string()));
     assert_eq!(sections[0].subs.len(), 2);

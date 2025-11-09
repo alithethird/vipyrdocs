@@ -13,7 +13,6 @@ use crate::constants::{
 use crate::plugin::{
     get_result, ClassInfo, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind,
 };
-use pyo3::prelude::*;
 use rustpython_ast::text_size::TextRange;
 use rustpython_ast::{Arguments, Expr, ExprAttribute, ExprCall, StmtRaise, StmtReturn};
 use rustpython_parser::text_size::TextSize;
@@ -48,8 +47,6 @@ pub fn lint_file(code: &str, file_name: Option<&str>) -> Vec<String> {
     apply_rules(code.as_str(), file_name)
 }
 
-#[pyfunction]
-#[pyo3(signature = (code, file_name=None))]
 pub fn apply_rules(code: &str, file_name: Option<&str>) -> Vec<String> {
     let mut output: Vec<String> = Vec::new();
 
