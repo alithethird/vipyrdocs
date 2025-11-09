@@ -3,8 +3,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 mod constants;
 mod docstring;
+mod inheritance;
 mod plugin;
 mod rule_engine;
+
+use inheritance::InheritanceTracker;
 /// 🐍 vipyrdocs — Fast. Lethal. Python docstring checks.
 #[derive(Parser, Debug)]
 #[command(
@@ -99,9 +102,27 @@ fn main() {
             continue;
         }
 
+        // Create inheritance tracker for cross-file validation
+        let mut tracker = InheritanceTracker::new();
+
+        // First pass: collect all abstract methods and concrete methods
+        for file in &files {
+            let file_str = match file.to_str() {
+                Some(value) => value,
+                None => continue,
+            };
+
+            // Read file and collect inheritance info
+            rule_engine::collect_inheritance_info(file_str, &mut tracker);
+        }
+
+        // Validate inheritance relationships
+        let inheritance_violations = tracker.validate();
+
         println!("🐍 Scan result:");
         let mut issues_found = false;
 
+        // Second pass: check regular docstring rules
         for file in files {
             let file_str = match file.to_str() {
                 Some(value) => value.to_string(),
@@ -114,7 +135,21 @@ fn main() {
                 }
             };
 
-            let output = rule_engine::lint_file("", Some(file_str.as_str()));
+            let mut output = rule_engine::lint_file("", Some(file_str.as_str()));
+
+            // Add inheritance violations for this file
+            for violation in &inheritance_violations {
+                if violation.file_path == file_str {
+                    let error_msg = format!(
+                        "{}:{} {} {}",
+                        violation.line,
+                        0,
+                        violation.get_error_code(),
+                        violation.to_error_message()
+                    );
+                    output.push(error_msg);
+                }
+            }
 
             if output.is_empty() {
                 files_scanned += 1;
