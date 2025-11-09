@@ -13,6 +13,7 @@ use crate::constants::{
 use crate::plugin::{
     get_result, ClassInfo, DocstringCollector, FunctionDefKind, FunctionInfo, YieldKind,
 };
+use regex::Regex;
 use rustpython_ast::text_size::TextRange;
 use rustpython_ast::{Arguments, Expr, ExprAttribute, ExprCall, StmtRaise, StmtReturn};
 use rustpython_parser::text_size::TextSize;
@@ -33,6 +34,369 @@ fn is_test_file(file_name: Option<&str>) -> bool {
         }
     }
     false
+}
+
+lazy_static::lazy_static! {
+    static ref SUPPRESSION_REGEX: Regex = Regex::new(
+        r"(?i)^\s*vipyrdocs:\s*(disable(?:-next-docstring)?|disable-file)\s*=\s*(?P<codes>.+?)\s*$",
+    )
+    .unwrap();
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DirectiveType {
+    Disable,
+    DisableNextDocstring,
+    DisableFile,
+}
+
+#[derive(Default)]
+struct DirectiveParseResult {
+    line_suppressions: HashMap<usize, HashSet<String>>,
+    line_disable_directives: HashMap<usize, HashSet<String>>,
+    next_docstring_comments: Vec<(usize, HashSet<String>)>,
+    leading_disable_directives: HashMap<usize, HashSet<String>>,
+    file_suppressions: HashSet<String>,
+}
+
+#[derive(Debug, Clone)]
+struct BlockSuppression {
+    start_line: usize,
+    end_line: usize,
+    codes: HashSet<String>,
+}
+
+impl BlockSuppression {
+    fn contains(&self, line: usize) -> bool {
+        line >= self.start_line && line <= self.end_line
+    }
+
+    fn matches_code(&self, code: &str) -> bool {
+        self.codes.contains(code) || self.codes.contains("ALL")
+    }
+}
+
+#[derive(Clone, Copy)]
+enum DocTargetKind {
+    Function,
+    Class,
+}
+
+struct DocTarget {
+    docstring_line: usize,
+    start_line: usize,
+    end_line: usize,
+    kind: DocTargetKind,
+    consumed: bool,
+}
+
+struct SuppressionIndex {
+    line_suppressions: HashMap<usize, HashSet<String>>,
+    file_suppressions: HashSet<String>,
+    function_blocks: Vec<BlockSuppression>,
+    class_blocks: Vec<BlockSuppression>,
+}
+
+impl SuppressionIndex {
+    fn new(file_contents: &str, collector: &DocstringCollector) -> Self {
+        let parse_result = parse_suppression_directives(file_contents);
+        let mut function_blocks: Vec<BlockSuppression> = Vec::new();
+        let mut class_blocks: Vec<BlockSuppression> = Vec::new();
+        let mut doc_targets: Vec<DocTarget> = Vec::new();
+
+        let add_block = |blocks: &mut Vec<BlockSuppression>,
+                         start_line: usize,
+                         end_line: usize,
+                         codes: &HashSet<String>| {
+            if start_line == 0 || end_line == 0 {
+                return;
+            }
+            if let Some(existing) = blocks
+                .iter_mut()
+                .find(|block| block.start_line == start_line && block.end_line == end_line)
+            {
+                existing.codes.extend(codes.clone());
+            } else {
+                blocks.push(BlockSuppression {
+                    start_line,
+                    end_line,
+                    codes: codes.clone(),
+                });
+            }
+        };
+
+        for function in &collector.function_infos {
+            let (start_line, end_line) = range_to_lines(function.def.range(), file_contents);
+            if let Some(codes) = parse_result.line_disable_directives.get(&start_line) {
+                add_block(&mut function_blocks, start_line, end_line, codes);
+            }
+
+            if start_line > 0 {
+                let prev_line = start_line - 1;
+                if let Some(codes) = parse_result.leading_disable_directives.get(&prev_line) {
+                    add_block(&mut function_blocks, start_line, end_line, codes);
+                }
+            }
+
+            if let Some(docstring) = function.docstring.as_ref() {
+                let (doc_start, _) = range_to_lines(&docstring.get_range(), file_contents);
+                if doc_start != 0 {
+                    doc_targets.push(DocTarget {
+                        docstring_line: doc_start,
+                        start_line,
+                        end_line,
+                        kind: DocTargetKind::Function,
+                        consumed: false,
+                    });
+                }
+            }
+        }
+
+        for class in &collector.class_infos {
+            let (class_start, class_end) = range_to_lines(&class.def.range, file_contents);
+            if let Some(codes) = parse_result.line_disable_directives.get(&class_start) {
+                add_block(&mut class_blocks, class_start, class_end, codes);
+            }
+
+            if class_start > 0 {
+                let prev_line = class_start - 1;
+                if let Some(codes) = parse_result.leading_disable_directives.get(&prev_line) {
+                    add_block(&mut class_blocks, class_start, class_end, codes);
+                }
+            }
+
+            if let Some(docstring) = class.docstring.as_ref() {
+                let (doc_start, _) = range_to_lines(&docstring.get_range(), file_contents);
+                if doc_start != 0 {
+                    doc_targets.push(DocTarget {
+                        docstring_line: doc_start,
+                        start_line: class_start,
+                        end_line: class_end,
+                        kind: DocTargetKind::Class,
+                        consumed: false,
+                    });
+                }
+            }
+
+            for method in &class.funcs {
+                let (start_line, end_line) = range_to_lines(method.def.range(), file_contents);
+                if let Some(codes) = parse_result.line_disable_directives.get(&start_line) {
+                    add_block(&mut function_blocks, start_line, end_line, codes);
+                }
+
+                if start_line > 0 {
+                    let prev_line = start_line - 1;
+                    if let Some(codes) = parse_result.leading_disable_directives.get(&prev_line) {
+                        add_block(&mut function_blocks, start_line, end_line, codes);
+                    }
+                }
+
+                if let Some(docstring) = method.docstring.as_ref() {
+                    let (doc_start, _) = range_to_lines(&docstring.get_range(), file_contents);
+                    if doc_start != 0 {
+                        doc_targets.push(DocTarget {
+                            docstring_line: doc_start,
+                            start_line,
+                            end_line,
+                            kind: DocTargetKind::Function,
+                            consumed: false,
+                        });
+                    }
+                }
+            }
+        }
+
+        doc_targets.sort_by_key(|target| target.docstring_line);
+
+        let mut comment_entries = parse_result.next_docstring_comments.clone();
+        comment_entries.sort_by_key(|(line, _)| *line);
+
+        for (comment_line, codes) in comment_entries {
+            if codes.is_empty() {
+                continue;
+            }
+            if let Some(target) = doc_targets
+                .iter_mut()
+                .find(|target| !target.consumed && target.docstring_line > comment_line)
+            {
+                target.consumed = true;
+                match target.kind {
+                    DocTargetKind::Function => {
+                        add_block(
+                            &mut function_blocks,
+                            target.start_line,
+                            target.end_line,
+                            &codes,
+                        );
+                    }
+                    DocTargetKind::Class => {
+                        add_block(
+                            &mut class_blocks,
+                            target.start_line,
+                            target.end_line,
+                            &codes,
+                        );
+                    }
+                }
+            }
+        }
+
+        Self {
+            line_suppressions: parse_result.line_suppressions,
+            file_suppressions: parse_result.file_suppressions,
+            function_blocks,
+            class_blocks,
+        }
+    }
+
+    fn is_suppressed_entry(&self, entry: &str) -> bool {
+        if let Some((line, _, message)) = parse_entry(entry) {
+            if let Some(code) = extract_code(&message) {
+                return self.is_suppressed(line, &code);
+            }
+        }
+        false
+    }
+
+    fn is_suppressed(&self, line: usize, code: &str) -> bool {
+        let code_upper = code.to_ascii_uppercase();
+
+        if self.file_suppressions.contains("ALL") || self.file_suppressions.contains(&code_upper) {
+            return true;
+        }
+
+        if let Some(codes) = self.line_suppressions.get(&line) {
+            if codes.contains("ALL") || codes.contains(&code_upper) {
+                return true;
+            }
+        }
+
+        for block in &self.function_blocks {
+            if block.contains(line) && block.matches_code(&code_upper) {
+                return true;
+            }
+        }
+
+        for block in &self.class_blocks {
+            if block.contains(line) && block.matches_code(&code_upper) {
+                return true;
+            }
+        }
+
+        false
+    }
+}
+
+fn parse_suppression_directives(file_contents: &str) -> DirectiveParseResult {
+    let mut result = DirectiveParseResult::default();
+    for (idx, line) in file_contents.lines().enumerate() {
+        let line_number = idx + 1;
+        if let Some(hash_index) = line.find('#') {
+            let comment = &line[hash_index + 1..];
+            if let Some((directive_type, codes)) = parse_comment_directive(comment) {
+                match directive_type {
+                    DirectiveType::Disable => {
+                        if !codes.is_empty() {
+                            result
+                                .line_suppressions
+                                .entry(line_number)
+                                .or_default()
+                                .extend(codes.clone());
+
+                            if line[..hash_index].trim().is_empty() {
+                                result
+                                    .leading_disable_directives
+                                    .entry(line_number)
+                                    .or_default()
+                                    .extend(codes.clone());
+                            }
+
+                            result
+                                .line_disable_directives
+                                .entry(line_number)
+                                .or_default()
+                                .extend(codes);
+                        }
+                    }
+                    DirectiveType::DisableNextDocstring => {
+                        if !codes.is_empty() {
+                            result.next_docstring_comments.push((line_number, codes));
+                        }
+                    }
+                    DirectiveType::DisableFile => {
+                        result.file_suppressions.extend(codes);
+                    }
+                }
+            }
+        }
+    }
+
+    result
+}
+
+fn parse_comment_directive(comment: &str) -> Option<(DirectiveType, HashSet<String>)> {
+    let trimmed = comment.trim();
+    let captures = SUPPRESSION_REGEX.captures(trimmed)?;
+    let keyword = captures.get(1)?.as_str().to_ascii_lowercase();
+    let codes_raw = captures.name("codes")?.as_str();
+    let codes = parse_codes(codes_raw);
+    if codes.is_empty() {
+        return None;
+    }
+    let directive_type = match keyword.as_str() {
+        "disable" => DirectiveType::Disable,
+        "disable-next-docstring" => DirectiveType::DisableNextDocstring,
+        "disable-file" => DirectiveType::DisableFile,
+        _ => return None,
+    };
+    Some((directive_type, codes))
+}
+
+fn parse_codes(raw_codes: &str) -> HashSet<String> {
+    raw_codes
+        .split(|c: char| c == ',' || c.is_whitespace())
+        .filter_map(|token| {
+            let token = token.trim();
+            if token.is_empty() {
+                return None;
+            }
+            let upper = token.to_ascii_uppercase();
+            if upper == "ALL" || upper.starts_with('D') {
+                Some(upper)
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+fn parse_entry(entry: &str) -> Option<(usize, usize, String)> {
+    let (line_part, rest) = entry.split_once(':')?;
+    let line: usize = line_part.trim().parse().ok()?;
+    let rest = rest.trim_start();
+    let (column_part, message) = rest.split_once(' ')?;
+    let column: usize = column_part.trim().parse().ok()?;
+    Some((line, column, message.trim().to_string()))
+}
+
+fn extract_code(message: &str) -> Option<String> {
+    message
+        .split_whitespace()
+        .next()
+        .map(|token| token.trim().to_ascii_uppercase())
+}
+
+fn range_to_lines(range: &TextRange, file_contents: &str) -> (usize, usize) {
+    let start_offset = range.start().to_usize();
+    let end_offset = range.end().to_usize();
+    let start_line = find_line_and_column(file_contents, start_offset)
+        .map(|(line, _)| line)
+        .unwrap_or(0);
+    let end_index = if end_offset == 0 { 0 } else { end_offset - 1 };
+    let end_line = find_line_and_column(file_contents, end_index)
+        .map(|(line, _)| line)
+        .unwrap_or(start_line);
+    (start_line, end_line)
 }
 
 pub fn lint_file(code: &str, file_name: Option<&str>) -> Vec<String> {
@@ -87,11 +451,11 @@ pub fn find_string_in_text_range(
 
                 let column_number = before
                     .rfind('\n')
-                    .map(|idx| absolute_pos - idx - 1)
+                    .map(|idx| absolute_pos.saturating_sub(idx + 1))
                     .unwrap_or(absolute_pos);
 
                 positions.push((
-                    line_number - 2,
+                    line_number.saturating_sub(2),
                     column_number,
                     target_strings[i].to_string(),
                 ));
@@ -111,10 +475,10 @@ pub fn find_string_in_text_range(
 
         let column_number = before
             .rfind('\n')
-            .map(|idx| start - idx - 1)
+            .map(|idx| start.saturating_sub(idx + 1))
             .unwrap_or(start);
 
-        positions.push((line_number - 2, column_number, "".to_string()));
+    positions.push((line_number.saturating_sub(2), column_number, "".to_string()));
     }
 
     positions
@@ -128,7 +492,7 @@ fn find_line_and_column(s: &str, char_index: usize) -> Option<(usize, usize)> {
         let next_char_index = current_char_index + line_char_count;
 
         if char_index < next_char_index {
-            let column = char_index - current_char_index;
+            let column = char_index.saturating_sub(current_char_index);
             return Some((line_number + 1, column)); // Lines are 1-based, columns 0-based
         }
 
@@ -1613,6 +1977,7 @@ fn generate_rules_output(
     things: &DocstringCollector,
     is_test_file: bool,
 ) -> Vec<String> {
+    let suppressions = SuppressionIndex::new(file_contents, things);
     // DC0010: docstring missing on a function/ method/ class
     let mut problem_functions: Vec<String> = Vec::new();
 
@@ -1894,6 +2259,9 @@ fn generate_rules_output(
         ));
     }
     problem_functions
+        .into_iter()
+        .filter(|entry| !suppressions.is_suppressed_entry(entry))
+        .collect()
 }
 
 fn check_functions_for_missing_docstring(
