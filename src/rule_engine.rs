@@ -434,7 +434,18 @@ pub fn find_string_in_text_range(
     let start = usize::try_from(range.start().to_u32()).unwrap();
     let end = usize::try_from(range.end().to_u32()).unwrap();
 
-    let sub = &s[start..end].to_lowercase();
+    // Ensure we're working with valid UTF-8 boundaries
+    if start >= s.len() || end > s.len() || start > end {
+        return Vec::new();
+    }
+
+    // Get the substring safely - if boundaries are invalid, return empty
+    let sub_str = match s.get(start..end) {
+        Some(sub) => sub,
+        None => return Vec::new(),
+    };
+    
+    let sub = sub_str.to_lowercase();
     let mut positions: Vec<(usize, usize, String)> = Vec::new();
     let target_strings_lower: Vec<String> =
         target_strings.iter().map(|t| t.to_lowercase()).collect();
@@ -443,25 +454,30 @@ pub fn find_string_in_text_range(
     while offset < sub.len() {
         let mut matched = false;
         for (i, target) in target_strings_lower.iter().enumerate() {
-            if sub[offset..].starts_with(target) {
-                let absolute_pos = start + offset;
+            // Use get() for safe slicing
+            if let Some(sub_slice) = sub.get(offset..) {
+                if sub_slice.starts_with(target.as_str()) {
+                    let absolute_pos = start + offset;
 
-                let before = &s[..absolute_pos];
-                let line_number = before.lines().count(); // 1-based
+                    // Safely slice to get the "before" part
+                    if let Some(before) = s.get(..absolute_pos) {
+                        let line_number = before.lines().count(); // 1-based
 
-                let column_number = before
-                    .rfind('\n')
-                    .map(|idx| absolute_pos.saturating_sub(idx + 1))
-                    .unwrap_or(absolute_pos);
+                        let column_number = before
+                            .rfind('\n')
+                            .map(|idx| absolute_pos.saturating_sub(idx + 1))
+                            .unwrap_or(absolute_pos);
 
-                positions.push((
-                    line_number.saturating_sub(2),
-                    column_number,
-                    target_strings[i].to_string(),
-                ));
-                offset += target.len();
-                matched = true;
-                break; // only take the first match at this position
+                        positions.push((
+                            line_number.saturating_sub(2),
+                            column_number,
+                            target_strings[i].to_string(),
+                        ));
+                    }
+                    offset += target.len();
+                    matched = true;
+                    break; // only take the first match at this position
+                }
             }
         }
         if !matched {
@@ -470,15 +486,17 @@ pub fn find_string_in_text_range(
     }
 
     if positions.is_empty() {
-        let before = &s[..start];
-        let line_number = before.lines().count(); // 1-based
+        // Safely slice to get the "before" part
+        if let Some(before) = s.get(..start) {
+            let line_number = before.lines().count(); // 1-based
 
-        let column_number = before
-            .rfind('\n')
-            .map(|idx| start.saturating_sub(idx + 1))
-            .unwrap_or(start);
+            let column_number = before
+                .rfind('\n')
+                .map(|idx| start.saturating_sub(idx + 1))
+                .unwrap_or(start);
 
-    positions.push((line_number.saturating_sub(2), column_number, "".to_string()));
+            positions.push((line_number.saturating_sub(2), column_number, "".to_string()));
+        }
     }
 
     positions
