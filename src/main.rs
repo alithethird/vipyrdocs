@@ -118,6 +118,9 @@ fn main() {
 
         // Validate inheritance relationships
         let inheritance_violations = tracker.validate();
+        
+        // Get methods that implement abstract methods (for docstring inheritance)
+        let implementing_methods = tracker.get_methods_implementing_abstract();
 
         println!("🐍 Scan result:");
         let mut issues_found = false;
@@ -135,7 +138,11 @@ fn main() {
                 }
             };
 
-            let mut output = rule_engine::lint_file("", Some(file_str.as_str()));
+            let mut output = rule_engine::lint_file_with_inheritance(
+                "",
+                Some(file_str.as_str()),
+                Some(&implementing_methods),
+            );
 
             // Add inheritance violations for this file
             for violation in &inheritance_violations {
