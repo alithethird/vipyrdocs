@@ -19,6 +19,7 @@ pub struct ConcreteMethodInfo {
     pub has_returns: bool,
     pub has_raises: bool,
     pub has_yields: bool,
+    pub has_docstring: bool,
     pub file_path: String,
     pub line: usize,
 }
@@ -54,6 +55,12 @@ impl InheritanceTracker {
         let mut violations = Vec::new();
 
         for concrete in &self.concrete_methods {
+            // Skip validation if the concrete method has no docstring
+            // (it inherits the docstring from the abstract method)
+            if !concrete.has_docstring {
+                continue;
+            }
+            
             // Check each base class
             for base_class in &concrete.base_classes {
                 let key = (base_class.clone(), concrete.method_name.clone());
@@ -101,6 +108,32 @@ impl InheritanceTracker {
         }
 
         violations
+    }
+
+    /// Get a set of (file_path, class_name, method_name) for methods that implement abstract methods
+    /// These methods should inherit docstrings from their abstract base methods
+    pub fn get_methods_implementing_abstract(&self) -> std::collections::HashSet<(String, String, String)> {
+        use std::collections::HashSet;
+        let mut implementing_methods = HashSet::new();
+
+        for concrete in &self.concrete_methods {
+            // Check each base class
+            for base_class in &concrete.base_classes {
+                let key = (base_class.clone(), concrete.method_name.clone());
+                
+                // If this method implements an abstract method, add it to the set
+                if self.abstract_methods.contains_key(&key) {
+                    implementing_methods.insert((
+                        concrete.file_path.clone(),
+                        concrete.class_name.clone(),
+                        concrete.method_name.clone(),
+                    ));
+                    break; // No need to check other base classes for this method
+                }
+            }
+        }
+
+        implementing_methods
     }
 }
 

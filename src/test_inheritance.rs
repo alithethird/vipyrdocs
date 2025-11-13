@@ -26,6 +26,7 @@ fn test_inheritance_tracker_returns_violation() {
         has_raises: false,
         has_yields: false,
         file_path: "/tmp/impl.py".to_string(),
+        has_docstring: true,
         line: 10,
     });
 
@@ -64,6 +65,7 @@ fn test_inheritance_tracker_raises_violation() {
         has_raises: false, // Missing Raises!
         has_yields: false,
         file_path: "/tmp/impl.py".to_string(),
+        has_docstring: true,
         line: 20,
     });
 
@@ -99,6 +101,7 @@ fn test_inheritance_tracker_yields_violation() {
         has_raises: false,
         has_yields: false, // Missing Yields!
         file_path: "/tmp/impl.py".to_string(),
+        has_docstring: true,
         line: 30,
     });
 
@@ -134,6 +137,7 @@ fn test_inheritance_tracker_no_violation_when_documented() {
         has_raises: true,  // Properly documented!
         has_yields: false,
         file_path: "/tmp/impl.py".to_string(),
+        has_docstring: true,
         line: 10,
     });
 
@@ -173,6 +177,7 @@ fn test_inheritance_tracker_multiple_base_classes() {
         has_raises: false,
         has_yields: false,
         file_path: "/tmp/impl.py".to_string(),
+        has_docstring: true,
         line: 10,
     });
 
@@ -184,6 +189,7 @@ fn test_inheritance_tracker_multiple_base_classes() {
         has_raises: false, // Missing Raises from BaseB!
         has_yields: false,
         file_path: "/tmp/impl.py".to_string(),
+        has_docstring: true,
         line: 20,
     });
 
@@ -204,6 +210,7 @@ fn test_inheritance_tracker_no_violation_when_no_abstract() {
         has_raises: false,
         has_yields: false,
         file_path: "/tmp/impl.py".to_string(),
+        has_docstring: true,
         line: 10,
     });
 

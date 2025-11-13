@@ -400,6 +400,14 @@ fn range_to_lines(range: &TextRange, file_contents: &str) -> (usize, usize) {
 }
 
 pub fn lint_file(code: &str, file_name: Option<&str>) -> Vec<String> {
+    lint_file_with_inheritance(code, file_name, None)
+}
+
+pub fn lint_file_with_inheritance(
+    code: &str, 
+    file_name: Option<&str>,
+    implementing_methods: Option<&std::collections::HashSet<(String, String, String)>>
+) -> Vec<String> {
     // Make a mutable String to hold the actual code
     let mut code = code.to_string();
 
@@ -408,17 +416,25 @@ pub fn lint_file(code: &str, file_name: Option<&str>) -> Vec<String> {
         code = read_file(file); // assuming this returns String
     }
 
-    apply_rules(code.as_str(), file_name)
+    apply_rules_with_inheritance(code.as_str(), file_name, implementing_methods)
 }
 
 pub fn apply_rules(code: &str, file_name: Option<&str>) -> Vec<String> {
+    apply_rules_with_inheritance(code, file_name, None)
+}
+
+pub fn apply_rules_with_inheritance(
+    code: &str, 
+    file_name: Option<&str>,
+    implementing_methods: Option<&std::collections::HashSet<(String, String, String)>>
+) -> Vec<String> {
     let mut output: Vec<String> = Vec::new();
 
     let things = get_result(code, file_name);
 
     let test_file = is_test_file(file_name);
 
-    output.extend(generate_rules_output(code, &things, test_file));
+    output.extend(generate_rules_output_with_inheritance(code, &things, test_file, file_name, implementing_methods));
 
     // apply the rules
     output
@@ -2008,15 +2024,27 @@ fn generate_rules_output(
     things: &DocstringCollector,
     is_test_file: bool,
 ) -> Vec<String> {
+    generate_rules_output_with_inheritance(file_contents, things, is_test_file, None, None)
+}
+
+fn generate_rules_output_with_inheritance(
+    file_contents: &str,
+    things: &DocstringCollector,
+    is_test_file: bool,
+    file_name: Option<&str>,
+    implementing_methods: Option<&std::collections::HashSet<(String, String, String)>>,
+) -> Vec<String> {
     let suppressions = SuppressionIndex::new(file_contents, things);
     // DC0010: docstring missing on a function/ method/ class
     let mut problem_functions: Vec<String> = Vec::new();
 
     // DC0010: docstring missing on a function/ method/ class
-    problem_functions.extend(check_functions_for_missing_docstring(
+    problem_functions.extend(check_functions_for_missing_docstring_with_inheritance(
         &things.function_infos,
         file_contents,
         is_test_file,
+        file_name,
+        implementing_methods,
     ));
 
     // DCO030: function/ method that returns a value does not have the returns section in the docstring.
@@ -2150,10 +2178,15 @@ fn generate_rules_output(
         is_test_file,
     ));
     for class_info in &things.class_infos {
-        problem_functions.extend(check_functions_for_missing_docstring(
+        let class_name = class_info.def.name.to_string();
+        
+        problem_functions.extend(check_functions_for_missing_docstring_in_class(
             &class_info.funcs,
             file_contents,
             is_test_file,
+            file_name,
+            Some(&class_name),
+            implementing_methods,
         ));
         problem_functions.extend(check_functions_for_missing_returns_section(
             &class_info.funcs,
@@ -2300,6 +2333,24 @@ fn check_functions_for_missing_docstring(
     file_contents: &str,
     is_test_file: bool,
 ) -> Vec<String> {
+    check_functions_for_missing_docstring_in_class(
+        function_infos,
+        file_contents,
+        is_test_file,
+        None,
+        None,
+        None,
+    )
+}
+
+fn check_functions_for_missing_docstring_in_class(
+    function_infos: &Vec<FunctionInfo>,
+    file_contents: &str,
+    is_test_file: bool,
+    file_name: Option<&str>,
+    class_name: Option<&str>,
+    implementing_methods: Option<&std::collections::HashSet<(String, String, String)>>,
+) -> Vec<String> {
     let mut problem_functions: Vec<String> = Vec::new();
 
     for function in function_infos {
@@ -2308,6 +2359,19 @@ fn check_functions_for_missing_docstring(
         }
 
         if function.docstring.is_none() {
+            // Check if this method implements an abstract method
+            // If so, skip D010 check (it inherits the docstring)
+            if let (Some(impl_methods), Some(file_path), Some(cls_name)) = 
+                (implementing_methods, file_name, class_name) {
+                let method_name = function.def.name().to_string();
+                let key = (file_path.to_string(), cls_name.to_string(), method_name);
+                
+                if impl_methods.contains(&key) {
+                    // This method implements an abstract method, skip D010
+                    continue;
+                }
+            }
+
             let (line, line_location) =
                 find_line_and_column(file_contents, function.def.range().start().to_usize())
                     .unwrap();
@@ -2317,6 +2381,33 @@ fn check_functions_for_missing_docstring(
     }
 
     problem_functions
+}
+
+fn check_functions_for_missing_docstring_with_inheritance(
+    function_infos: &Vec<FunctionInfo>,
+    file_contents: &str,
+    is_test_file: bool,
+    file_name: Option<&str>,
+    implementing_methods: Option<&std::collections::HashSet<(String, String, String)>>,
+) -> Vec<String> {
+    // For top-level functions (not in a class), use empty class name
+    check_functions_for_missing_docstring_in_class(
+        function_infos,
+        file_contents,
+        is_test_file,
+        file_name,
+        Some(""),
+        implementing_methods,
+    )
+}
+
+/// Helper function to get the class name for a function if it's a method
+fn get_class_name_for_function(function: &FunctionInfo) -> String {
+    // This is a simple heuristic - in the real implementation we'd need to track
+    // which class each function belongs to. For now, we can use an empty string
+    // and rely on the fact that we're tracking methods in classes.
+    // A better approach would be to pass class context through the checking functions.
+    "".to_string()
 }
 fn is_property(function: &FunctionInfo) -> bool {
     for decorator in function.def.decorator_list() {
@@ -2594,6 +2685,7 @@ pub fn collect_inheritance_info(file_name: &str, tracker: &mut crate::inheritanc
             } else if !base_classes.is_empty() {
                 // This is a concrete method in a class with base classes
                 // It might be implementing an abstract method
+                let has_docstring = method.docstring.is_some();
                 let has_returns = method.docstring.as_ref()
                     .map(|d| d.has_returns())
                     .unwrap_or(false);
@@ -2615,6 +2707,7 @@ pub fn collect_inheritance_info(file_name: &str, tracker: &mut crate::inheritanc
                     has_returns,
                     has_raises,
                     has_yields,
+                    has_docstring,
                     file_path: file_name.to_string(),
                     line,
                 });
