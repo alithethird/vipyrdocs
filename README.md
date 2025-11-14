@@ -110,7 +110,7 @@ Add a `# vipyrdocs: disable=<CODES>` comment to the end of a `def`/`class` line 
 - 👌 DCO062: class with one or more attributes and the docstring has multiple attributes sections.
 - 👌 DCO063: class has one or more public attributes not described in the docstring.
 - 👌 DCO064: class has one or more attributes described in the docstring which are not attributes of the class.
-- 🙅 DCO065: class has one or more attributes described in the docstring multiple times.
+- 👌 DCO065: class has one or more attributes described in the docstring multiple times.
 - 👌 DCO070: method implements an abstract method that documents a return value, but the implementation is missing a Returns section in the docstring.
 - 👌 DCO071: method implements an abstract method that documents exceptions, but the implementation is missing a Raises section in the docstring.
 - 👌 DCO072: method implements an abstract method that documents yields, but the implementation is missing a Yields section in the docstring.
