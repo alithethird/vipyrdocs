@@ -399,7 +399,11 @@ fn range_to_lines(range: &TextRange, file_contents: &str) -> (usize, usize) {
     (start_line, end_line)
 }
 
-pub fn lint_file(code: &str, file_name: Option<&str>) -> Vec<String> {
+pub fn lint_file_with_inheritance(
+    code: &str,
+    file_name: Option<&str>,
+    implementing_methods: Option<&std::collections::HashSet<(String, String, String)>>,
+) -> Vec<String> {
     // Make a mutable String to hold the actual code
     let mut code = code.to_string();
 
@@ -408,17 +412,27 @@ pub fn lint_file(code: &str, file_name: Option<&str>) -> Vec<String> {
         code = read_file(file); // assuming this returns String
     }
 
-    apply_rules(code.as_str(), file_name)
+    apply_rules_with_inheritance(code.as_str(), file_name, implementing_methods)
 }
 
-pub fn apply_rules(code: &str, file_name: Option<&str>) -> Vec<String> {
+pub fn apply_rules_with_inheritance(
+    code: &str,
+    file_name: Option<&str>,
+    implementing_methods: Option<&std::collections::HashSet<(String, String, String)>>,
+) -> Vec<String> {
     let mut output: Vec<String> = Vec::new();
 
     let things = get_result(code, file_name);
 
     let test_file = is_test_file(file_name);
 
-    output.extend(generate_rules_output(code, &things, test_file));
+    output.extend(generate_rules_output_with_inheritance(
+        code,
+        &things,
+        test_file,
+        file_name,
+        implementing_methods,
+    ));
 
     // apply the rules
     output
@@ -434,7 +448,18 @@ pub fn find_string_in_text_range(
     let start = usize::try_from(range.start().to_u32()).unwrap();
     let end = usize::try_from(range.end().to_u32()).unwrap();
 
-    let sub = &s[start..end].to_lowercase();
+    // Ensure we're working with valid UTF-8 boundaries
+    if start >= s.len() || end > s.len() || start > end {
+        return Vec::new();
+    }
+
+    // Get the substring safely - if boundaries are invalid, return empty
+    let sub_str = match s.get(start..end) {
+        Some(sub) => sub,
+        None => return Vec::new(),
+    };
+
+    let sub = sub_str.to_lowercase();
     let mut positions: Vec<(usize, usize, String)> = Vec::new();
     let target_strings_lower: Vec<String> =
         target_strings.iter().map(|t| t.to_lowercase()).collect();
@@ -443,25 +468,30 @@ pub fn find_string_in_text_range(
     while offset < sub.len() {
         let mut matched = false;
         for (i, target) in target_strings_lower.iter().enumerate() {
-            if sub[offset..].starts_with(target) {
-                let absolute_pos = start + offset;
+            // Use get() for safe slicing
+            if let Some(sub_slice) = sub.get(offset..) {
+                if sub_slice.starts_with(target.as_str()) {
+                    let absolute_pos = start + offset;
 
-                let before = &s[..absolute_pos];
-                let line_number = before.lines().count(); // 1-based
+                    // Safely slice to get the "before" part
+                    if let Some(before) = s.get(..absolute_pos) {
+                        let line_number = before.lines().count(); // 1-based
 
-                let column_number = before
-                    .rfind('\n')
-                    .map(|idx| absolute_pos.saturating_sub(idx + 1))
-                    .unwrap_or(absolute_pos);
+                        let column_number = before
+                            .rfind('\n')
+                            .map(|idx| absolute_pos.saturating_sub(idx + 1))
+                            .unwrap_or(absolute_pos);
 
-                positions.push((
-                    line_number.saturating_sub(2),
-                    column_number,
-                    target_strings[i].to_string(),
-                ));
-                offset += target.len();
-                matched = true;
-                break; // only take the first match at this position
+                        positions.push((
+                            line_number.saturating_sub(2),
+                            column_number,
+                            target_strings[i].to_string(),
+                        ));
+                    }
+                    offset += target.len();
+                    matched = true;
+                    break; // only take the first match at this position
+                }
             }
         }
         if !matched {
@@ -470,15 +500,17 @@ pub fn find_string_in_text_range(
     }
 
     if positions.is_empty() {
-        let before = &s[..start];
-        let line_number = before.lines().count(); // 1-based
+        // Safely slice to get the "before" part
+        if let Some(before) = s.get(..start) {
+            let line_number = before.lines().count(); // 1-based
 
-        let column_number = before
-            .rfind('\n')
-            .map(|idx| start.saturating_sub(idx + 1))
-            .unwrap_or(start);
+            let column_number = before
+                .rfind('\n')
+                .map(|idx| start.saturating_sub(idx + 1))
+                .unwrap_or(start);
 
-    positions.push((line_number.saturating_sub(2), column_number, "".to_string()));
+            positions.push((line_number.saturating_sub(2), column_number, "".to_string()));
+        }
     }
 
     positions
@@ -552,12 +584,18 @@ fn check_functions_for_duplicate_arg_in_args_section(
                     &_range,
                     vec!["args", "arguments", "parameters"],
                 );
-                let (line, line_location, _) = args_lines.first().unwrap().to_owned();
-                problem_functions.push(format_problem(
-                    line,
-                    line_location,
-                    duplicate_arg_msg(arg_name.as_str()),
-                ));
+                if let Some((line, line_location, _)) = args_lines.first() {
+                    problem_functions.push(format_problem(
+                        *line,
+                        *line_location,
+                        duplicate_arg_msg(arg_name.as_str()),
+                    ));
+                } else {
+                    eprintln!(
+                        "Warning: Could not find line information for duplicate arg at position {}",
+                        _range.start().to_usize()
+                    );
+                }
             }
         }
     }
@@ -633,12 +671,19 @@ fn check_functions_for_extra_arg_in_args_section(
             if !arg_names.contains(&arg_name) {
                 let args_lines =
                     find_string_in_text_range(file_contents, _range, vec![arg_name.as_str()]);
-                let (line, line_location, _) = args_lines.first().unwrap().to_owned();
-                problem_functions.push(format_problem(
-                    line + 2,
-                    line_location,
-                    arg_in_docstr_msg(arg_name.as_str()),
-                ));
+                if let Some((line, line_location, _)) = args_lines.first() {
+                    problem_functions.push(format_problem(
+                        line + 2,
+                        *line_location,
+                        arg_in_docstr_msg(arg_name.as_str()),
+                    ));
+                } else {
+                    eprintln!(
+                        "Warning: Could not find line information for arg '{}' at position {}",
+                        arg_name,
+                        _range.start().to_usize()
+                    );
+                }
             }
         }
     }
@@ -683,12 +728,18 @@ fn check_classes_for_attrs_section_not_in_docstr(
                 &TextRange::new(TextSize::new(0), class_info.def.range.end()),
                 vec![attr_name.as_str()],
             );
-            let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
-            errors.push(format_problem(
-                line,
-                line_location,
-                attrs_section_not_in_docstr_msg(),
-            ));
+            if let Some((line, line_location, _)) = exc_lines.first() {
+                errors.push(format_problem(
+                    *line,
+                    *line_location,
+                    attrs_section_not_in_docstr_msg(),
+                ));
+            } else {
+                eprintln!(
+                    "Warning: Could not find line information for attribute '{}' in class",
+                    attr_name
+                );
+            }
         }
     }
 
@@ -799,19 +850,22 @@ fn check_classes_for_multiple_attrs_section_in_docstr(
         );
         // TODO: attribute section can be attrs instead of Attrs. Make sure the
         // find_string_in_text_range function returns the actual found string
-        let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
-        let joined_attribute_sections: String = exc_lines
-            .iter()
-            .map(|(_, _, third)| third)
-            .cloned()
-            .collect::<Vec<_>>()
-            .join(",");
+        if let Some((line, line_location, _)) = exc_lines.first() {
+            let joined_attribute_sections: String = exc_lines
+                .iter()
+                .map(|(_, _, third)| third)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(",");
 
-        errors.push(format_problem(
-            line,
-            line_location,
-            mult_attrs_section_in_docstr_msg(joined_attribute_sections.as_str()),
-        ));
+            errors.push(format_problem(
+                *line,
+                *line_location,
+                mult_attrs_section_in_docstr_msg(joined_attribute_sections.as_str()),
+            ));
+        } else {
+            eprintln!("Warning: Could not find line information for multiple attrs section");
+        }
     }
     errors
 }
@@ -1692,6 +1746,11 @@ fn check_functions_for_extra_yields_section(
             continue;
         }
 
+        // Skip abstract methods - they can have yields sections without yielding
+        if is_abstractmethod(function) {
+            continue;
+        }
+
         let yield_statements: &Vec<YieldKind> = &function.yields;
 
         if (yield_statements.len() == 1
@@ -1731,6 +1790,10 @@ fn check_functions_for_extra_raises_section(
         if function.docstring.is_none() {
             continue;
         }
+        // Skip abstract methods - they can have raises sections without raising
+        if is_abstractmethod(function) {
+            continue;
+        }
         let _docstring = function.docstring.clone().unwrap();
 
         if function.raises.is_empty() && _docstring.has_raises_sections() {
@@ -1767,6 +1830,10 @@ fn check_functions_for_extra_returns_section(
         }
         // ignore if function doesn't have docstrings
         if function.docstring.is_none() {
+            continue;
+        }
+        // Skip abstract methods - they can have returns sections without returning
+        if is_abstractmethod(function) {
             continue;
         }
         let _docstring = function.docstring.clone().unwrap();
@@ -1818,7 +1885,8 @@ fn check_functions_for_missing_raises_section(
         if !function.docstring.as_ref().unwrap().has_raises_sections() {
             for ret in raise_statements {
                 let (line, line_location) =
-                    find_line_and_column(file_contents, ret.range.start().to_usize()).unwrap();
+                    find_line_and_column(file_contents, ret.range.start().to_usize())
+                        .unwrap_or((0, 0));
                 problem_functions.push(format_problem(
                     line,
                     line_location,
@@ -1859,7 +1927,8 @@ fn check_functions_for_missing_yields_section(
                     continue;
                 }
                 let (line, line_location) =
-                    find_line_and_column(file_contents, _range.start().to_usize()).unwrap();
+                    find_line_and_column(file_contents, _range.start().to_usize())
+                        .unwrap_or((0, 0));
                 problem_functions.push(format_problem(
                     line,
                     line_location,
@@ -1958,7 +2027,8 @@ fn check_functions_for_missing_returns_section(
                     let _range = &ret.range;
 
                     let (line, line_location) =
-                        find_line_and_column(file_contents, _range.start().to_usize()).unwrap();
+                        find_line_and_column(file_contents, _range.start().to_usize())
+                            .unwrap_or((0, 0));
                     problem_functions.push(format_problem(
                         line,
                         line_location,
@@ -1972,20 +2042,24 @@ fn check_functions_for_missing_returns_section(
     problem_functions
 }
 
-fn generate_rules_output(
+fn generate_rules_output_with_inheritance(
     file_contents: &str,
     things: &DocstringCollector,
     is_test_file: bool,
+    file_name: Option<&str>,
+    implementing_methods: Option<&std::collections::HashSet<(String, String, String)>>,
 ) -> Vec<String> {
     let suppressions = SuppressionIndex::new(file_contents, things);
     // DC0010: docstring missing on a function/ method/ class
     let mut problem_functions: Vec<String> = Vec::new();
 
     // DC0010: docstring missing on a function/ method/ class
-    problem_functions.extend(check_functions_for_missing_docstring(
+    problem_functions.extend(check_functions_for_missing_docstring_with_inheritance(
         &things.function_infos,
         file_contents,
         is_test_file,
+        file_name,
+        implementing_methods,
     ));
 
     // DCO030: function/ method that returns a value does not have the returns section in the docstring.
@@ -2119,10 +2193,15 @@ fn generate_rules_output(
         is_test_file,
     ));
     for class_info in &things.class_infos {
-        problem_functions.extend(check_functions_for_missing_docstring(
+        let class_name = class_info.def.name.to_string();
+
+        problem_functions.extend(check_functions_for_missing_docstring_in_class(
             &class_info.funcs,
             file_contents,
             is_test_file,
+            file_name,
+            Some(&class_name),
+            implementing_methods,
         ));
         problem_functions.extend(check_functions_for_missing_returns_section(
             &class_info.funcs,
@@ -2264,10 +2343,13 @@ fn generate_rules_output(
         .collect()
 }
 
-fn check_functions_for_missing_docstring(
+fn check_functions_for_missing_docstring_in_class(
     function_infos: &Vec<FunctionInfo>,
     file_contents: &str,
     is_test_file: bool,
+    file_name: Option<&str>,
+    class_name: Option<&str>,
+    implementing_methods: Option<&std::collections::HashSet<(String, String, String)>>,
 ) -> Vec<String> {
     let mut problem_functions: Vec<String> = Vec::new();
 
@@ -2277,16 +2359,48 @@ fn check_functions_for_missing_docstring(
         }
 
         if function.docstring.is_none() {
+            // Check if this method implements an abstract method
+            // If so, skip D010 check (it inherits the docstring)
+            if let (Some(impl_methods), Some(file_path), Some(cls_name)) =
+                (implementing_methods, file_name, class_name)
+            {
+                let method_name = function.def.name().to_string();
+                let key = (file_path.to_string(), cls_name.to_string(), method_name);
+
+                if impl_methods.contains(&key) {
+                    // This method implements an abstract method, skip D010
+                    continue;
+                }
+            }
+
             let (line, line_location) =
                 find_line_and_column(file_contents, function.def.range().start().to_usize())
-                    .unwrap();
-
+                    .unwrap_or((0, 0));
             problem_functions.push(format_problem(line, line_location, docstr_missing_msg()));
         }
     }
 
     problem_functions
 }
+
+fn check_functions_for_missing_docstring_with_inheritance(
+    function_infos: &Vec<FunctionInfo>,
+    file_contents: &str,
+    is_test_file: bool,
+    file_name: Option<&str>,
+    implementing_methods: Option<&std::collections::HashSet<(String, String, String)>>,
+) -> Vec<String> {
+    // For top-level functions (not in a class), use empty class name
+    check_functions_for_missing_docstring_in_class(
+        function_infos,
+        file_contents,
+        is_test_file,
+        file_name,
+        Some(""),
+        implementing_methods,
+    )
+}
+
 fn is_property(function: &FunctionInfo) -> bool {
     for decorator in function.def.decorator_list() {
         if decorator.is_name_expr() {
@@ -2333,6 +2447,40 @@ fn is_overload(function: &FunctionInfo) -> bool {
             if attr.value.is_name_expr() {
                 let name = &attr.value.as_name_expr().unwrap().id;
                 if attr.attr.to_string() == "overload" && name == "typing" {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+fn is_abstractmethod(function: &FunctionInfo) -> bool {
+    for decorator in function.def.decorator_list() {
+        if decorator.is_name_expr() {
+            let id = &decorator.as_name_expr().unwrap().id;
+            if id.eq_ignore_ascii_case("abstractmethod") {
+                return true;
+            }
+        }
+
+        if decorator.is_call_expr() {
+            let call: &ExprCall = decorator.as_call_expr().unwrap();
+            if let Some(name_expr) = call.func.as_name_expr() {
+                let id = &name_expr.id;
+                if id.eq_ignore_ascii_case("abstractmethod") {
+                    return true;
+                }
+            }
+        }
+
+        if decorator.is_attribute_expr() {
+            let attr: &ExprAttribute = decorator.as_attribute_expr().unwrap();
+            if attr.value.is_name_expr() {
+                let name = &attr.value.as_name_expr().unwrap().id;
+                if (attr.attr.to_string() == "abstractmethod" && name == "abc")
+                    || (attr.attr.to_string() == "abstractmethod" && name == "ABC")
+                {
                     return true;
                 }
             }
@@ -2483,4 +2631,101 @@ fn should_skip(function: &FunctionInfo, is_test_file: bool) -> bool {
         return true;
     }
     false
+}
+
+/// Collect inheritance information from a file for cross-file validation
+pub fn collect_inheritance_info(
+    file_name: &str,
+    tracker: &mut crate::inheritance::InheritanceTracker,
+) {
+    use crate::inheritance::{extract_base_classes, AbstractMethodInfo, ConcreteMethodInfo};
+
+    let code = read_file(file_name);
+    let collector = get_result(&code, Some(file_name));
+
+    // Process classes
+    for class_info in &collector.class_infos {
+        let class_name = class_info.def.name.to_string();
+        let base_classes = extract_base_classes(class_info);
+
+        // Process methods in the class
+        for method in &class_info.funcs {
+            let method_name = method.def.name().to_string();
+
+            // Skip private methods
+            if method_name.starts_with("_") && method_name != "__init__" {
+                continue;
+            }
+
+            // Check if this is an abstract method
+            if is_abstractmethod(method) {
+                // Register abstract method
+                let has_returns = method
+                    .docstring
+                    .as_ref()
+                    .map(|d| d.has_returns())
+                    .unwrap_or(false);
+                let has_raises = method
+                    .docstring
+                    .as_ref()
+                    .map(|d| d.has_raises_sections())
+                    .unwrap_or(false);
+                let has_yields = method
+                    .docstring
+                    .as_ref()
+                    .map(|d| d.has_yields())
+                    .unwrap_or(false);
+
+                tracker.register_abstract_method(AbstractMethodInfo {
+                    class_name: class_name.clone(),
+                    method_name: method_name.clone(),
+                    has_returns,
+                    has_raises,
+                    has_yields,
+                    file_path: file_name.to_string(),
+                });
+            } else if !base_classes.is_empty() {
+                // This is a concrete method in a class with base classes
+                // It might be implementing an abstract method
+                let has_docstring = method.docstring.is_some();
+                let has_returns = method
+                    .docstring
+                    .as_ref()
+                    .map(|d| d.has_returns())
+                    .unwrap_or(false);
+                let has_raises = method
+                    .docstring
+                    .as_ref()
+                    .map(|d| d.has_raises_sections())
+                    .unwrap_or(false);
+                let has_yields = method
+                    .docstring
+                    .as_ref()
+                    .map(|d| d.has_yields())
+                    .unwrap_or(false);
+
+                // Get the line number
+                let (line, _) = find_line_and_column(&code, method.def.range().start().to_usize())
+                    .unwrap_or((0, 0));
+
+                tracker.register_concrete_method(ConcreteMethodInfo {
+                    class_name: class_name.clone(),
+                    method_name: method_name.clone(),
+                    base_classes: base_classes.clone(),
+                    has_returns,
+                    has_raises,
+                    has_yields,
+                    has_docstring,
+                    file_path: file_name.to_string(),
+                    line,
+                });
+            }
+        }
+    }
+}
+
+#[allow(dead_code)]
+#[cfg(test)]
+pub fn lint_file(code: &str, file_name: Option<&str>) -> Vec<String> {
+    lint_file_with_inheritance(code, file_name, None)
 }
