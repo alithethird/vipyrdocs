@@ -190,7 +190,7 @@ fn main() {
 
     if files_scanned > 0 {
         println!(
-            "📊 Summary: scanned {} file{}; {} had issues; {} issue{} total.",
+            "\n📊 Summary: scanned {} file{}; {} had issues; {} issue{} total.",
             files_scanned,
             if files_scanned == 1 { "" } else { "s" },
             files_with_issues,

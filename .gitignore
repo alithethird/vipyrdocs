@@ -11,3 +11,6 @@ target/
 
 # Virtual environments
 .venv
+
+/tests/repo_test/downloaded_repos/
+/tests/repo_test/test_results.log
