@@ -46,7 +46,7 @@ pub struct Docstring {
     raises_sections: Option<Vec<String>>,
     range: TextRange,
 }
-
+#[allow(clippy::too_many_arguments)]
 impl Docstring {
     fn new(
         args: Option<Vec<String>>,
@@ -257,7 +257,7 @@ fn _get_section_by_name<'a>(name: &str, sections: &'a [_Section]) -> Option<&'a 
             .unwrap_or(false)
     })
 }
-fn _get_all_section_names_by_name<'a>(name: &str, sections: &'a [_Section]) -> Option<Vec<String>> {
+fn _get_all_section_names_by_name(name: &str, sections: &[_Section]) -> Option<Vec<String>> {
     let valid_names = &_SECTION_NAMES[name];
 
     let all_section_names: Vec<String> = sections

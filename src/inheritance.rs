@@ -32,6 +32,12 @@ pub struct InheritanceTracker {
     concrete_methods: Vec<ConcreteMethodInfo>,
 }
 
+impl Default for InheritanceTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InheritanceTracker {
     pub fn new() -> Self {
         Self {
@@ -77,7 +83,7 @@ impl InheritanceTracker {
                             method_name: concrete.method_name.clone(),
                             class_name: concrete.class_name.clone(),
                             base_class: base_class.clone(),
-                            violation_type: ViolationType::MissingReturns,
+                            violation_type: ViolationType::Returns,
                         });
                     }
 
@@ -89,7 +95,7 @@ impl InheritanceTracker {
                             method_name: concrete.method_name.clone(),
                             class_name: concrete.class_name.clone(),
                             base_class: base_class.clone(),
-                            violation_type: ViolationType::MissingRaises,
+                            violation_type: ViolationType::Raises,
                         });
                     }
 
@@ -101,7 +107,7 @@ impl InheritanceTracker {
                             method_name: concrete.method_name.clone(),
                             class_name: concrete.class_name.clone(),
                             base_class: base_class.clone(),
-                            violation_type: ViolationType::MissingYields,
+                            violation_type: ViolationType::Yields,
                         });
                     }
                 }
@@ -152,27 +158,27 @@ pub struct InheritanceViolation {
 
 #[derive(Debug, Clone)]
 pub enum ViolationType {
-    MissingReturns,
-    MissingRaises,
-    MissingYields,
+    Returns,
+    Raises,
+    Yields,
 }
 
 impl InheritanceViolation {
     pub fn to_error_message(&self) -> String {
         match self.violation_type {
-            ViolationType::MissingReturns => {
+            ViolationType::Returns => {
                 format!(
                     "method '{}' in class '{}' implements abstract method from '{}' which documents a return value, but this implementation is missing a Returns section in the docstring",
                     self.method_name, self.class_name, self.base_class
                 )
             }
-            ViolationType::MissingRaises => {
+            ViolationType::Raises => {
                 format!(
                     "method '{}' in class '{}' implements abstract method from '{}' which documents exceptions, but this implementation is missing a Raises section in the docstring",
                     self.method_name, self.class_name, self.base_class
                 )
             }
-            ViolationType::MissingYields => {
+            ViolationType::Yields => {
                 format!(
                     "method '{}' in class '{}' implements abstract method from '{}' which documents yields, but this implementation is missing a Yields section in the docstring",
                     self.method_name, self.class_name, self.base_class
@@ -183,9 +189,9 @@ impl InheritanceViolation {
 
     pub fn get_error_code(&self) -> &str {
         match self.violation_type {
-            ViolationType::MissingReturns => "D070",
-            ViolationType::MissingRaises => "D071",
-            ViolationType::MissingYields => "D072",
+            ViolationType::Returns => "D070",
+            ViolationType::Raises => "D071",
+            ViolationType::Yields => "D072",
         }
     }
 }
