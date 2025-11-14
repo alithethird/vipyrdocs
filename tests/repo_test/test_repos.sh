@@ -4,7 +4,6 @@
 # Usage: ./test_repos.sh
 
 set -e
-set -x
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPOS_FILE="${REPOS_FILE:-$SCRIPT_DIR/repos.txt}"
