@@ -1314,8 +1314,7 @@ fn check_functions_for_missing_exc_in_raises_section(
     problem_functions
 }
 fn get_exc_id(exc: StmtRaise) -> Option<String> {
-    exc.exc.as_ref()?;
-    let _exc = exc.exc.unwrap();
+    let _exc = exc.exc.as_ref()?;
 
     if _exc.is_attribute_expr() {
         let _exc = _exc.as_attribute_expr();
