@@ -20,6 +20,26 @@ use rustpython_parser::text_size::TextSize;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 
+// Helper function to convert byte offset to line and column number
+fn byte_offset_to_line_column(code: &str, offset: usize) -> (usize, usize) {
+    let mut line = 1;
+    let mut column = 1;
+    
+    for (i, byte) in code.bytes().enumerate() {
+        if i >= offset {
+            break;
+        }
+        if byte == b'\n' {
+            line += 1;
+            column = 1;
+        } else {
+            column += 1;
+        }
+    }
+    
+    (line, column)
+}
+
 fn read_file(file_name: &str) -> String {
     // Read the file and return the contents
     fs::read_to_string(file_name).unwrap_or_default()
@@ -586,12 +606,15 @@ fn check_functions_for_duplicate_arg_in_args_section(
                     &_range,
                     vec!["args", "arguments", "parameters"],
                 );
-                let (line, line_location, _) = args_lines.first().unwrap().to_owned();
-                problem_functions.push(format_problem(
-                    line,
-                    line_location,
-                    duplicate_arg_msg(arg_name.as_str()),
-                ));
+                if let Some((line, line_location, _)) = args_lines.first() {
+                    problem_functions.push(format_problem(
+                        *line,
+                        *line_location,
+                        duplicate_arg_msg(arg_name.as_str()),
+                    ));
+                } else {
+                    eprintln!("Warning: Could not find line information for duplicate arg at position {}", _range.start().to_usize());
+                }
             }
         }
     }
@@ -667,12 +690,15 @@ fn check_functions_for_extra_arg_in_args_section(
             if !arg_names.contains(&arg_name) {
                 let args_lines =
                     find_string_in_text_range(file_contents, _range, vec![arg_name.as_str()]);
-                let (line, line_location, _) = args_lines.first().unwrap().to_owned();
-                problem_functions.push(format_problem(
-                    line + 2,
-                    line_location,
-                    arg_in_docstr_msg(arg_name.as_str()),
-                ));
+                if let Some((line, line_location, _)) = args_lines.first() {
+                    problem_functions.push(format_problem(
+                        line + 2,
+                        *line_location,
+                        arg_not_in_docstr_msg(arg_name.as_str()),
+                    ));
+                } else {
+                    eprintln!("Warning: Could not find line information for arg '{}' at position {}", arg_name, _range.start().to_usize());
+                }
             }
         }
     }
@@ -717,12 +743,15 @@ fn check_classes_for_attrs_section_not_in_docstr(
                 &TextRange::new(TextSize::new(0), class_info.def.range.end()),
                 vec![attr_name.as_str()],
             );
-            let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
-            errors.push(format_problem(
-                line,
-                line_location,
-                attrs_section_not_in_docstr_msg(),
-            ));
+            if let Some((line, line_location, _)) = exc_lines.first() {
+                errors.push(format_problem(
+                    *line,
+                    *line_location,
+                    attrs_section_not_in_docstr_msg(),
+                ));
+            } else {
+                eprintln!("Warning: Could not find line information for attribute '{}' in class", attr_name);
+            }
         }
     }
 
@@ -833,19 +862,22 @@ fn check_classes_for_multiple_attrs_section_in_docstr(
         );
         // TODO: attribute section can be attrs instead of Attrs. Make sure the
         // find_string_in_text_range function returns the actual found string
-        let (line, line_location, _) = exc_lines.first().unwrap().to_owned();
-        let joined_attribute_sections: String = exc_lines
-            .iter()
-            .map(|(_, _, third)| third)
-            .cloned()
-            .collect::<Vec<_>>()
-            .join(",");
+        if let Some((line, line_location, _)) = exc_lines.first() {
+            let joined_attribute_sections: String = exc_lines
+                .iter()
+                .map(|(_, _, third)| third)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(",");
 
-        errors.push(format_problem(
-            line,
-            line_location,
-            mult_attrs_section_in_docstr_msg(joined_attribute_sections.as_str()),
-        ));
+            errors.push(format_problem(
+                *line,
+                *line_location,
+                mult_attrs_section_in_docstr_msg(joined_attribute_sections.as_str()),
+            ));
+        } else {
+            eprintln!("Warning: Could not find line information for multiple attrs section");
+        }
     }
     errors
 }
@@ -1865,7 +1897,7 @@ fn check_functions_for_missing_raises_section(
         if !function.docstring.as_ref().unwrap().has_raises_sections() {
             for ret in raise_statements {
                 let (line, line_location) =
-                    find_line_and_column(file_contents, ret.range.start().to_usize()).unwrap();
+                    find_line_and_column(file_contents, ret.range.start().to_usize()).unwrap_or((0, 0));
                 problem_functions.push(format_problem(
                     line,
                     line_location,
@@ -1906,7 +1938,7 @@ fn check_functions_for_missing_yields_section(
                     continue;
                 }
                 let (line, line_location) =
-                    find_line_and_column(file_contents, _range.start().to_usize()).unwrap();
+                    find_line_and_column(file_contents, _range.start().to_usize()).unwrap_or((0, 0));
                 problem_functions.push(format_problem(
                     line,
                     line_location,
@@ -2005,7 +2037,7 @@ fn check_functions_for_missing_returns_section(
                     let _range = &ret.range;
 
                     let (line, line_location) =
-                        find_line_and_column(file_contents, _range.start().to_usize()).unwrap();
+                        find_line_and_column(file_contents, _range.start().to_usize()).unwrap_or((0, 0));
                     problem_functions.push(format_problem(
                         line,
                         line_location,
@@ -2371,11 +2403,9 @@ fn check_functions_for_missing_docstring_in_class(
                     continue;
                 }
             }
-
-            let (line, line_location) =
-                find_line_and_column(file_contents, function.def.range().start().to_usize())
-                    .unwrap();
-
+            
+            let (line, line_location) = find_line_and_column(file_contents, function.def.range().start().to_usize())
+                .unwrap_or((0, 0));
             problem_functions.push(format_problem(line, line_location, docstr_missing_msg()));
         }
     }
