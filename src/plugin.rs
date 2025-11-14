@@ -10,10 +10,72 @@ use rustpython_parser::{parse, Mode};
 
 use std::collections::HashSet;
 
+// Helper function to extract byte offset from error messages
+fn extract_byte_offset(error_msg: &str) -> Option<usize> {
+    // Look for patterns like "at byte offset 3347"
+    if let Some(start) = error_msg.find("at byte offset ") {
+        let offset_str = &error_msg[start + "at byte offset ".len()..];
+        if let Some(end) = offset_str.find(char::is_whitespace) {
+            offset_str[..end].parse().ok()
+        } else {
+            offset_str.parse().ok()
+        }
+    } else {
+        None
+    }
+}
+
+// Helper function to convert byte offset to line and column number
+fn byte_offset_to_line_column(code: &str, offset: usize) -> (usize, usize) {
+    let mut line = 1;
+    let mut column = 1;
+
+    for (i, byte) in code.bytes().enumerate() {
+        if i >= offset {
+            break;
+        }
+        if byte == b'\n' {
+            line += 1;
+            column = 1;
+        } else {
+            column += 1;
+        }
+    }
+
+    (line, column)
+}
+
 pub fn get_result(code: &str, filename: Option<&str>) -> DocstringCollector {
     let filename = filename.unwrap_or("<embedded>");
     let tree = parse(code, Mode::Interactive, filename);
-    let tree_mod = tree.unwrap();
+
+    // Handle parsing errors gracefully
+    let tree_mod = match tree {
+        Ok(parsed_tree) => parsed_tree,
+        Err(parse_error) => {
+            // Convert byte offset to line number for more helpful error messages
+            let error_msg = if let Some(offset) = extract_byte_offset(&parse_error.to_string()) {
+                let (line, column) = byte_offset_to_line_column(code, offset);
+                format!(
+                    "Failed to parse Python file '{}': {} at line {}, column {}",
+                    filename, parse_error, line, column
+                )
+            } else {
+                format!(
+                    "Failed to parse Python file '{}': {}",
+                    filename, parse_error
+                )
+            };
+            eprintln!("Warning: {}", error_msg);
+
+            // Return empty collector for unparseable files
+            return DocstringCollector {
+                function_infos: Vec::new(),
+                class_infos: Vec::new(),
+            };
+        }
+    };
+
     let body = &tree_mod.as_interactive().unwrap().body;
     let mut ds = DocstringCollector {
         function_infos: Vec::new(),
