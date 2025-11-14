@@ -1,0 +1,44 @@
+name: PR Rust CI & Repo Test
+
+on:
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  rust-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          components: clippy
+
+      - name: Build (release)
+        run: cargo build --release
+
+      - name: Run unit/integration tests
+        run: cargo test --all --release
+
+      - name: Run clippy
+        run: cargo clippy --all -- -D warnings
+
+      - name: Run repo_test script
+        id: repo_test
+        run: |
+          chmod +x tests/repo_test/test_repos.sh
+          tests/repo_test/test_repos.sh > repo_test_output.txt
+          tail -100 repo_test_output.txt
+
+      - name: Comment results on PR
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            ## `tests/repo_test/test_repos.sh` Output
+            ```
+            $(tail -100 repo_test_output.txt)
+            ```
