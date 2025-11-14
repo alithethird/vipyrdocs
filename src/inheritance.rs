@@ -60,14 +60,14 @@ impl InheritanceTracker {
             if !concrete.has_docstring {
                 continue;
             }
-            
+
             // Check each base class
             for base_class in &concrete.base_classes {
                 let key = (base_class.clone(), concrete.method_name.clone());
-                
+
                 if let Some(abstract_method) = self.abstract_methods.get(&key) {
                     // Found an abstract method that this concrete method implements
-                    
+
                     // Check Returns
                     if abstract_method.has_returns && !concrete.has_returns {
                         violations.push(InheritanceViolation {
@@ -112,7 +112,9 @@ impl InheritanceTracker {
 
     /// Get a set of (file_path, class_name, method_name) for methods that implement abstract methods
     /// These methods should inherit docstrings from their abstract base methods
-    pub fn get_methods_implementing_abstract(&self) -> std::collections::HashSet<(String, String, String)> {
+    pub fn get_methods_implementing_abstract(
+        &self,
+    ) -> std::collections::HashSet<(String, String, String)> {
         use std::collections::HashSet;
         let mut implementing_methods = HashSet::new();
 
@@ -120,7 +122,7 @@ impl InheritanceTracker {
             // Check each base class
             for base_class in &concrete.base_classes {
                 let key = (base_class.clone(), concrete.method_name.clone());
-                
+
                 // If this method implements an abstract method, add it to the set
                 if self.abstract_methods.contains_key(&key) {
                     implementing_methods.insert((
@@ -190,20 +192,20 @@ impl InheritanceViolation {
 /// Extract base class names from a class definition
 pub fn extract_base_classes(class_info: &ClassInfo) -> Vec<String> {
     let mut base_classes = Vec::new();
-    
+
     for base in &class_info.def.bases {
         if let Some(name) = extract_name_from_expr(base) {
             base_classes.push(name);
         }
     }
-    
+
     base_classes
 }
 
 /// Extract a simple name from an expression (handles Name and Attribute expressions)
 fn extract_name_from_expr(expr: &rustpython_ast::Expr) -> Option<String> {
     use rustpython_ast::Expr;
-    
+
     match expr {
         Expr::Name(name_expr) => Some(name_expr.id.to_string()),
         Expr::Attribute(attr_expr) => {
@@ -218,7 +220,7 @@ fn extract_name_from_expr(expr: &rustpython_ast::Expr) -> Option<String> {
 /// Check if a function has abstractmethod decorator
 pub fn is_abstractmethod_local(function: &FunctionInfo) -> bool {
     use rustpython_ast::{ExprAttribute, ExprCall};
-    
+
     for decorator in function.def.decorator_list() {
         if decorator.is_name_expr() {
             let id = &decorator.as_name_expr().unwrap().id;
@@ -242,7 +244,8 @@ pub fn is_abstractmethod_local(function: &FunctionInfo) -> bool {
             if attr.value.is_name_expr() {
                 let name = &attr.value.as_name_expr().unwrap().id;
                 if (attr.attr.to_string() == "abstractmethod" && name == "abc")
-                    || (attr.attr.to_string() == "abstractmethod" && name == "ABC") {
+                    || (attr.attr.to_string() == "abstractmethod" && name == "ABC")
+                {
                     return true;
                 }
             }

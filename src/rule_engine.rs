@@ -24,7 +24,7 @@ use std::fs;
 fn byte_offset_to_line_column(code: &str, offset: usize) -> (usize, usize) {
     let mut line = 1;
     let mut column = 1;
-    
+
     for (i, byte) in code.bytes().enumerate() {
         if i >= offset {
             break;
@@ -36,7 +36,7 @@ fn byte_offset_to_line_column(code: &str, offset: usize) -> (usize, usize) {
             column += 1;
         }
     }
-    
+
     (line, column)
 }
 
@@ -424,9 +424,9 @@ pub fn lint_file(code: &str, file_name: Option<&str>) -> Vec<String> {
 }
 
 pub fn lint_file_with_inheritance(
-    code: &str, 
+    code: &str,
     file_name: Option<&str>,
-    implementing_methods: Option<&std::collections::HashSet<(String, String, String)>>
+    implementing_methods: Option<&std::collections::HashSet<(String, String, String)>>,
 ) -> Vec<String> {
     // Make a mutable String to hold the actual code
     let mut code = code.to_string();
@@ -444,9 +444,9 @@ pub fn apply_rules(code: &str, file_name: Option<&str>) -> Vec<String> {
 }
 
 pub fn apply_rules_with_inheritance(
-    code: &str, 
+    code: &str,
     file_name: Option<&str>,
-    implementing_methods: Option<&std::collections::HashSet<(String, String, String)>>
+    implementing_methods: Option<&std::collections::HashSet<(String, String, String)>>,
 ) -> Vec<String> {
     let mut output: Vec<String> = Vec::new();
 
@@ -454,7 +454,13 @@ pub fn apply_rules_with_inheritance(
 
     let test_file = is_test_file(file_name);
 
-    output.extend(generate_rules_output_with_inheritance(code, &things, test_file, file_name, implementing_methods));
+    output.extend(generate_rules_output_with_inheritance(
+        code,
+        &things,
+        test_file,
+        file_name,
+        implementing_methods,
+    ));
 
     // apply the rules
     output
@@ -480,7 +486,7 @@ pub fn find_string_in_text_range(
         Some(sub) => sub,
         None => return Vec::new(),
     };
-    
+
     let sub = sub_str.to_lowercase();
     let mut positions: Vec<(usize, usize, String)> = Vec::new();
     let target_strings_lower: Vec<String> =
@@ -613,7 +619,10 @@ fn check_functions_for_duplicate_arg_in_args_section(
                         duplicate_arg_msg(arg_name.as_str()),
                     ));
                 } else {
-                    eprintln!("Warning: Could not find line information for duplicate arg at position {}", _range.start().to_usize());
+                    eprintln!(
+                        "Warning: Could not find line information for duplicate arg at position {}",
+                        _range.start().to_usize()
+                    );
                 }
             }
         }
@@ -694,10 +703,14 @@ fn check_functions_for_extra_arg_in_args_section(
                     problem_functions.push(format_problem(
                         line + 2,
                         *line_location,
-                        arg_not_in_docstr_msg(arg_name.as_str()),
+                        arg_in_docstr_msg(arg_name.as_str()),
                     ));
                 } else {
-                    eprintln!("Warning: Could not find line information for arg '{}' at position {}", arg_name, _range.start().to_usize());
+                    eprintln!(
+                        "Warning: Could not find line information for arg '{}' at position {}",
+                        arg_name,
+                        _range.start().to_usize()
+                    );
                 }
             }
         }
@@ -750,7 +763,10 @@ fn check_classes_for_attrs_section_not_in_docstr(
                     attrs_section_not_in_docstr_msg(),
                 ));
             } else {
-                eprintln!("Warning: Could not find line information for attribute '{}' in class", attr_name);
+                eprintln!(
+                    "Warning: Could not find line information for attribute '{}' in class",
+                    attr_name
+                );
             }
         }
     }
@@ -1897,7 +1913,8 @@ fn check_functions_for_missing_raises_section(
         if !function.docstring.as_ref().unwrap().has_raises_sections() {
             for ret in raise_statements {
                 let (line, line_location) =
-                    find_line_and_column(file_contents, ret.range.start().to_usize()).unwrap_or((0, 0));
+                    find_line_and_column(file_contents, ret.range.start().to_usize())
+                        .unwrap_or((0, 0));
                 problem_functions.push(format_problem(
                     line,
                     line_location,
@@ -1938,7 +1955,8 @@ fn check_functions_for_missing_yields_section(
                     continue;
                 }
                 let (line, line_location) =
-                    find_line_and_column(file_contents, _range.start().to_usize()).unwrap_or((0, 0));
+                    find_line_and_column(file_contents, _range.start().to_usize())
+                        .unwrap_or((0, 0));
                 problem_functions.push(format_problem(
                     line,
                     line_location,
@@ -2037,7 +2055,8 @@ fn check_functions_for_missing_returns_section(
                     let _range = &ret.range;
 
                     let (line, line_location) =
-                        find_line_and_column(file_contents, _range.start().to_usize()).unwrap_or((0, 0));
+                        find_line_and_column(file_contents, _range.start().to_usize())
+                            .unwrap_or((0, 0));
                     problem_functions.push(format_problem(
                         line,
                         line_location,
@@ -2211,7 +2230,7 @@ fn generate_rules_output_with_inheritance(
     ));
     for class_info in &things.class_infos {
         let class_name = class_info.def.name.to_string();
-        
+
         problem_functions.extend(check_functions_for_missing_docstring_in_class(
             &class_info.funcs,
             file_contents,
@@ -2393,19 +2412,21 @@ fn check_functions_for_missing_docstring_in_class(
         if function.docstring.is_none() {
             // Check if this method implements an abstract method
             // If so, skip D010 check (it inherits the docstring)
-            if let (Some(impl_methods), Some(file_path), Some(cls_name)) = 
-                (implementing_methods, file_name, class_name) {
+            if let (Some(impl_methods), Some(file_path), Some(cls_name)) =
+                (implementing_methods, file_name, class_name)
+            {
                 let method_name = function.def.name().to_string();
                 let key = (file_path.to_string(), cls_name.to_string(), method_name);
-                
+
                 if impl_methods.contains(&key) {
                     // This method implements an abstract method, skip D010
                     continue;
                 }
             }
-            
-            let (line, line_location) = find_line_and_column(file_contents, function.def.range().start().to_usize())
-                .unwrap_or((0, 0));
+
+            let (line, line_location) =
+                find_line_and_column(file_contents, function.def.range().start().to_usize())
+                    .unwrap_or((0, 0));
             problem_functions.push(format_problem(line, line_location, docstr_missing_msg()));
         }
     }
@@ -2517,7 +2538,8 @@ fn is_abstractmethod(function: &FunctionInfo) -> bool {
             if attr.value.is_name_expr() {
                 let name = &attr.value.as_name_expr().unwrap().id;
                 if (attr.attr.to_string() == "abstractmethod" && name == "abc")
-                    || (attr.attr.to_string() == "abstractmethod" && name == "ABC") {
+                    || (attr.attr.to_string() == "abstractmethod" && name == "ABC")
+                {
                     return true;
                 }
             }
@@ -2671,9 +2693,12 @@ fn should_skip(function: &FunctionInfo, is_test_file: bool) -> bool {
 }
 
 /// Collect inheritance information from a file for cross-file validation
-pub fn collect_inheritance_info(file_name: &str, tracker: &mut crate::inheritance::InheritanceTracker) {
-    use crate::inheritance::{AbstractMethodInfo, ConcreteMethodInfo, extract_base_classes};
-    
+pub fn collect_inheritance_info(
+    file_name: &str,
+    tracker: &mut crate::inheritance::InheritanceTracker,
+) {
+    use crate::inheritance::{extract_base_classes, AbstractMethodInfo, ConcreteMethodInfo};
+
     let code = read_file(file_name);
     let collector = get_result(&code, Some(file_name));
 
@@ -2685,7 +2710,7 @@ pub fn collect_inheritance_info(file_name: &str, tracker: &mut crate::inheritanc
         // Process methods in the class
         for method in &class_info.funcs {
             let method_name = method.def.name().to_string();
-            
+
             // Skip private methods
             if method_name.starts_with("_") && method_name != "__init__" {
                 continue;
@@ -2694,13 +2719,19 @@ pub fn collect_inheritance_info(file_name: &str, tracker: &mut crate::inheritanc
             // Check if this is an abstract method
             if is_abstractmethod(method) {
                 // Register abstract method
-                let has_returns = method.docstring.as_ref()
+                let has_returns = method
+                    .docstring
+                    .as_ref()
                     .map(|d| d.has_returns())
                     .unwrap_or(false);
-                let has_raises = method.docstring.as_ref()
+                let has_raises = method
+                    .docstring
+                    .as_ref()
                     .map(|d| d.has_raises_sections())
                     .unwrap_or(false);
-                let has_yields = method.docstring.as_ref()
+                let has_yields = method
+                    .docstring
+                    .as_ref()
                     .map(|d| d.has_yields())
                     .unwrap_or(false);
 
@@ -2716,13 +2747,19 @@ pub fn collect_inheritance_info(file_name: &str, tracker: &mut crate::inheritanc
                 // This is a concrete method in a class with base classes
                 // It might be implementing an abstract method
                 let has_docstring = method.docstring.is_some();
-                let has_returns = method.docstring.as_ref()
+                let has_returns = method
+                    .docstring
+                    .as_ref()
                     .map(|d| d.has_returns())
                     .unwrap_or(false);
-                let has_raises = method.docstring.as_ref()
+                let has_raises = method
+                    .docstring
+                    .as_ref()
                     .map(|d| d.has_raises_sections())
                     .unwrap_or(false);
-                let has_yields = method.docstring.as_ref()
+                let has_yields = method
+                    .docstring
+                    .as_ref()
                     .map(|d| d.has_yields())
                     .unwrap_or(false);
 

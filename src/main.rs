@@ -118,7 +118,7 @@ fn main() {
 
         // Validate inheritance relationships
         let inheritance_violations = tracker.validate();
-        
+
         // Get methods that implement abstract methods (for docstring inheritance)
         let implementing_methods = tracker.get_methods_implementing_abstract();
 
