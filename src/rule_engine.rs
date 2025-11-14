@@ -20,26 +20,6 @@ use rustpython_parser::text_size::TextSize;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 
-// Helper function to convert byte offset to line and column number
-fn byte_offset_to_line_column(code: &str, offset: usize) -> (usize, usize) {
-    let mut line = 1;
-    let mut column = 1;
-
-    for (i, byte) in code.bytes().enumerate() {
-        if i >= offset {
-            break;
-        }
-        if byte == b'\n' {
-            line += 1;
-            column = 1;
-        } else {
-            column += 1;
-        }
-    }
-
-    (line, column)
-}
-
 fn read_file(file_name: &str) -> String {
     // Read the file and return the contents
     fs::read_to_string(file_name).unwrap_or_default()
@@ -419,10 +399,6 @@ fn range_to_lines(range: &TextRange, file_contents: &str) -> (usize, usize) {
     (start_line, end_line)
 }
 
-pub fn lint_file(code: &str, file_name: Option<&str>) -> Vec<String> {
-    lint_file_with_inheritance(code, file_name, None)
-}
-
 pub fn lint_file_with_inheritance(
     code: &str,
     file_name: Option<&str>,
@@ -437,10 +413,6 @@ pub fn lint_file_with_inheritance(
     }
 
     apply_rules_with_inheritance(code.as_str(), file_name, implementing_methods)
-}
-
-pub fn apply_rules(code: &str, file_name: Option<&str>) -> Vec<String> {
-    apply_rules_with_inheritance(code, file_name, None)
 }
 
 pub fn apply_rules_with_inheritance(
@@ -2070,14 +2042,6 @@ fn check_functions_for_missing_returns_section(
     problem_functions
 }
 
-fn generate_rules_output(
-    file_contents: &str,
-    things: &DocstringCollector,
-    is_test_file: bool,
-) -> Vec<String> {
-    generate_rules_output_with_inheritance(file_contents, things, is_test_file, None, None)
-}
-
 fn generate_rules_output_with_inheritance(
     file_contents: &str,
     things: &DocstringCollector,
@@ -2379,21 +2343,6 @@ fn generate_rules_output_with_inheritance(
         .collect()
 }
 
-fn check_functions_for_missing_docstring(
-    function_infos: &Vec<FunctionInfo>,
-    file_contents: &str,
-    is_test_file: bool,
-) -> Vec<String> {
-    check_functions_for_missing_docstring_in_class(
-        function_infos,
-        file_contents,
-        is_test_file,
-        None,
-        None,
-        None,
-    )
-}
-
 fn check_functions_for_missing_docstring_in_class(
     function_infos: &Vec<FunctionInfo>,
     file_contents: &str,
@@ -2452,14 +2401,6 @@ fn check_functions_for_missing_docstring_with_inheritance(
     )
 }
 
-/// Helper function to get the class name for a function if it's a method
-fn get_class_name_for_function(function: &FunctionInfo) -> String {
-    // This is a simple heuristic - in the real implementation we'd need to track
-    // which class each function belongs to. For now, we can use an empty string
-    // and rely on the fact that we're tracking methods in classes.
-    // A better approach would be to pass class context through the checking functions.
-    "".to_string()
-}
 fn is_property(function: &FunctionInfo) -> bool {
     for decorator in function.def.decorator_list() {
         if decorator.is_name_expr() {
@@ -2781,4 +2722,10 @@ pub fn collect_inheritance_info(
             }
         }
     }
+}
+
+#[allow(dead_code)]
+#[cfg(test)]
+pub fn lint_file(code: &str, file_name: Option<&str>) -> Vec<String> {
+    lint_file_with_inheritance(code, file_name, None)
 }

@@ -1,6 +1,7 @@
 use crate::plugin::{ClassInfo, FunctionInfo};
 use std::collections::HashMap;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct AbstractMethodInfo {
     pub class_name: String,
