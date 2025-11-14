@@ -83,7 +83,9 @@ Add a `# vipyrdocs: disable=<CODES>` comment to the end of a `def`/`class` line 
 - Git pre-commit hook support
 - VSCode integration
 
-### Current rules 12/29
+
+### Ruleset: 29
+
 
 - 👌 DCO010: docstring missing on a function/ method/ class.
 - 👌 DCO020: function/ method has one or more arguments and the docstring does not have an arguments section.
