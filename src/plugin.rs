@@ -29,7 +29,7 @@ fn extract_byte_offset(error_msg: &str) -> Option<usize> {
 fn byte_offset_to_line_column(code: &str, offset: usize) -> (usize, usize) {
     let mut line = 1;
     let mut column = 1;
-    
+
     for (i, byte) in code.bytes().enumerate() {
         if i >= offset {
             break;
@@ -41,14 +41,14 @@ fn byte_offset_to_line_column(code: &str, offset: usize) -> (usize, usize) {
             column += 1;
         }
     }
-    
+
     (line, column)
 }
 
 pub fn get_result(code: &str, filename: Option<&str>) -> DocstringCollector {
     let filename = filename.unwrap_or("<embedded>");
     let tree = parse(code, Mode::Interactive, filename);
-    
+
     // Handle parsing errors gracefully
     let tree_mod = match tree {
         Ok(parsed_tree) => parsed_tree,
@@ -56,13 +56,18 @@ pub fn get_result(code: &str, filename: Option<&str>) -> DocstringCollector {
             // Convert byte offset to line number for more helpful error messages
             let error_msg = if let Some(offset) = extract_byte_offset(&parse_error.to_string()) {
                 let (line, column) = byte_offset_to_line_column(code, offset);
-                format!("Failed to parse Python file '{}': {} at line {}, column {}", 
-                       filename, parse_error, line, column)
+                format!(
+                    "Failed to parse Python file '{}': {} at line {}, column {}",
+                    filename, parse_error, line, column
+                )
             } else {
-                format!("Failed to parse Python file '{}': {}", filename, parse_error)
+                format!(
+                    "Failed to parse Python file '{}': {}",
+                    filename, parse_error
+                )
             };
             eprintln!("Warning: {}", error_msg);
-            
+
             // Return empty collector for unparseable files
             return DocstringCollector {
                 function_infos: Vec::new(),
@@ -70,7 +75,7 @@ pub fn get_result(code: &str, filename: Option<&str>) -> DocstringCollector {
             };
         }
     };
-    
+
     let body = &tree_mod.as_interactive().unwrap().body;
     let mut ds = DocstringCollector {
         function_infos: Vec::new(),
