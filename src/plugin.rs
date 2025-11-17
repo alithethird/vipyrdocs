@@ -453,7 +453,7 @@ impl Visitor for AttributeCollector {
         self.fn_depth += 1;
 
         if was_top_level_method {
-            if node.decorator_list.iter().any(|dec| is_property(dec)) {
+            if node.decorator_list.iter().any(is_property) {
                 self.record_class_attribute(node.name.to_string());
             }
 
@@ -481,7 +481,7 @@ impl Visitor for AttributeCollector {
         self.fn_depth += 1;
 
         if was_top_level_method {
-            if node.decorator_list.iter().any(|dec| is_property(dec)) {
+            if node.decorator_list.iter().any(is_property) {
                 self.record_class_attribute(node.name.to_string());
             }
 

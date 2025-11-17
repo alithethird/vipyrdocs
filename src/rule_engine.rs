@@ -26,8 +26,8 @@ fn read_file(file_name: &str) -> String {
 }
 
 fn is_test_file(file_name: Option<&str>) -> bool {
-    if file_name.is_some() {
-        let file_name = file_name.unwrap().split('/').next_back().unwrap();
+    if let Some(file_name) = file_name {
+        let file_name = file_name.split('/').next_back().unwrap();
 
         if file_name.starts_with("test_") || file_name.starts_with("conftest.py") {
             return true;
@@ -1314,10 +1314,7 @@ fn check_functions_for_missing_exc_in_raises_section(
     problem_functions
 }
 fn get_exc_id(exc: StmtRaise) -> Option<String> {
-    if exc.exc.is_none() {
-        return None;
-    }
-    let _exc = exc.exc.unwrap();
+    let _exc = exc.exc.as_ref()?;
 
     if _exc.is_attribute_expr() {
         let _exc = _exc.as_attribute_expr();
@@ -1336,9 +1333,6 @@ fn get_exc_id(exc: StmtRaise) -> Option<String> {
         } else if some_func.is_name_expr() {
             let some_exp = some_func.as_name_expr();
             Some(some_exp.unwrap().id.to_string())
-        } else if some_func.is_lambda_expr() {
-            None
-            // Some("Lambda".to_string())
         } else {
             None
         }
@@ -1435,7 +1429,7 @@ fn check_functions_for_missing_arg_in_args_section(
 
 fn is_arg_in_docstring(
     arg_name: String,
-    docstring_args: &Vec<String>,
+    docstring_args: &[String],
     _range: &TextRange,
     file_contents: &str,
 ) -> Option<String> {
