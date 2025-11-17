@@ -37,7 +37,7 @@ fn test_inheritance_tracker_returns_violation() {
     assert_eq!(violations[0].base_class, "BaseClass");
     assert!(matches!(
         violations[0].violation_type,
-        ViolationType::MissingReturns
+        ViolationType::Returns
     ));
     assert_eq!(violations[0].get_error_code(), "D070");
 }
@@ -73,7 +73,7 @@ fn test_inheritance_tracker_raises_violation() {
     assert_eq!(violations.len(), 1);
     assert!(matches!(
         violations[0].violation_type,
-        ViolationType::MissingRaises
+        ViolationType::Raises
     ));
     assert_eq!(violations[0].get_error_code(), "D071");
 }
@@ -109,7 +109,7 @@ fn test_inheritance_tracker_yields_violation() {
     assert_eq!(violations.len(), 1);
     assert!(matches!(
         violations[0].violation_type,
-        ViolationType::MissingYields
+        ViolationType::Yields
     ));
     assert_eq!(violations[0].get_error_code(), "D072");
 }

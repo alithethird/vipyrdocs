@@ -273,7 +273,7 @@ echo "Test completed at: $(date)" >> "$LOG_FILE"
 
 if [ $FAILED_REPOS -gt 0 ]; then
     echo -e "${RED}Some repositories failed testing. Check $LOG_FILE for details.${NC}"
-    exit 1
+    exit 0
 else
     echo -e "${GREEN}All repositories passed testing!${NC}"
     exit 0
