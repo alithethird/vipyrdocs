@@ -1,15 +1,22 @@
 pub const ERROR_CODE_PREFIX: &str = "D";
-pub const MORE_INFO_BASE: &str = ""; //" (more info: https://example.com/";
+pub const MORE_INFO_BASE: &str = "https://github.com/alithethird/vipyrdocs/"; //" (more info: https://example.com/";
+
+fn create_doc_link(_doc: String) -> String{
+    format!("{}{}",
+        MORE_INFO_BASE,
+        "" //_doc.to_lowercase()
+           // TODO: Update this when you write the docs
+        )
+}
 
 pub fn docstr_missing_code() -> String {
     format!("{}010", ERROR_CODE_PREFIX)
 }
 pub fn docstr_missing_msg() -> String {
     format!(
-        "{} docstring should be defined for a function/ method/ class{}{}",
+        "{} docstring should be defined for a function/ method/ class {}",
         docstr_missing_code(),
-        MORE_INFO_BASE,
-        docstr_missing_code().to_lowercase()
+        create_doc_link(docstr_missing_code())
     )
 }
 
@@ -18,10 +25,9 @@ pub fn args_section_not_in_docstr_code() -> String {
 }
 pub fn args_section_not_in_docstr_msg() -> String {
     format!(
-        "{} a function/ method with arguments should have the arguments section in the docstring{}{}",
+        "{} a function/ method with arguments should have the arguments section in the docstring {}",
         args_section_not_in_docstr_code(),
-        MORE_INFO_BASE,
-        args_section_not_in_docstr_code().to_lowercase()
+        create_doc_link(args_section_not_in_docstr_code())
     )
 }
 
@@ -30,10 +36,9 @@ pub fn args_section_in_docstr_code() -> String {
 }
 pub fn args_section_in_docstr_msg() -> String {
     format!(
-        "{} a function/ method without arguments should not have the arguments section in the docstring{}{}",
+        "{} a function/ method without arguments should not have the arguments section in the docstring {}",
         args_section_in_docstr_code(),
-        MORE_INFO_BASE,
-        args_section_in_docstr_code().to_lowercase()
+        create_doc_link(args_section_in_docstr_code())
     )
 }
 
@@ -42,11 +47,10 @@ pub fn mult_args_sections_in_docstr_code() -> String {
 }
 pub fn mult_args_sections_in_docstr_msg(found: &str) -> String {
     format!(
-        "{} a docstring should only contain a single arguments section, found {}{}{}",
+        "{} a docstring should only contain a single arguments section, found {} {}",
         mult_args_sections_in_docstr_code(),
         found,
-        MORE_INFO_BASE,
-        mult_args_sections_in_docstr_code().to_lowercase()
+        create_doc_link(mult_args_sections_in_docstr_code())
     )
 }
 pub fn arg_not_in_docstr_code() -> String {
@@ -54,11 +58,10 @@ pub fn arg_not_in_docstr_code() -> String {
 }
 pub fn arg_not_in_docstr_msg(_arg: &str) -> String {
     format!(
-        "{} \"{}\" argument should be described in the docstring{}{}",
+        "{} \"{}\" argument should be described in the docstring {}",
         arg_not_in_docstr_code(),
         _arg,
-        MORE_INFO_BASE,
-        arg_not_in_docstr_code().to_lowercase()
+        create_doc_link(arg_not_in_docstr_code())
     )
 }
 
@@ -67,11 +70,10 @@ pub fn arg_in_docstr_code() -> String {
 }
 pub fn arg_in_docstr_msg(_arg: &str) -> String {
     format!(
-        "{} \"{}\" argument should not be described in the docstring{}{}",
+        "{} \"{}\" argument should not be described in the docstring {}",
         arg_in_docstr_code(),
         _arg,
-        MORE_INFO_BASE,
-        arg_in_docstr_code().to_lowercase()
+        create_doc_link(arg_in_docstr_code())
     )
 }
 
@@ -80,11 +82,10 @@ pub fn duplicate_arg_in_docstr_code() -> String {
 }
 pub fn duplicate_arg_msg(_arg: &str) -> String {
     format!(
-        "{} \"{}\" argument documented multiple times{}{}",
+        "{} \"{}\" argument documented multiple times {}",
         duplicate_arg_in_docstr_code(),
         _arg,
-        MORE_INFO_BASE,
-        duplicate_arg_in_docstr_code().to_lowercase()
+        create_doc_link(duplicate_arg_in_docstr_code())
     )
 }
 pub fn returns_section_not_in_docstr_code() -> String {
@@ -93,10 +94,9 @@ pub fn returns_section_not_in_docstr_code() -> String {
 
 pub fn returns_section_not_in_docstr_msg() -> String {
     format!(
-        "{} function/ method that returns a value should have the returns section in the docstring{}{}",
+        "{} function/ method that returns a value should have the returns section in the docstring {}",
         returns_section_not_in_docstr_code(),
-        MORE_INFO_BASE,
-        returns_section_not_in_docstr_code().to_lowercase()
+        create_doc_link(returns_section_not_in_docstr_code())
     )
 }
 
@@ -105,10 +105,9 @@ pub fn returns_section_in_docstr_code() -> String {
 }
 pub fn returns_section_in_docstr_msg() -> String {
     format!(
-        "{} function/ method that does not return a value should not have the returns section in the docstring{}{}",
+        "{} function/ method that does not return a value should not have the returns section in the docstring {}",
         returns_section_in_docstr_code(),
-        MORE_INFO_BASE,
-        returns_section_in_docstr_code().to_lowercase()
+        create_doc_link(returns_section_in_docstr_code())
     )
 }
 
@@ -117,11 +116,10 @@ pub fn mult_returns_sections_in_docstr_code() -> String {
 }
 pub fn mult_returns_sections_in_docstr_msg(found: &str) -> String {
     format!(
-        "{} a docstring should only contain a single returns section, found {}{}{}",
+        "{} a docstring should only contain a single returns section, found {} {}",
         mult_returns_sections_in_docstr_code(),
         found,
-        MORE_INFO_BASE,
-        mult_returns_sections_in_docstr_code().to_lowercase()
+        create_doc_link(mult_returns_sections_in_docstr_code())
     )
 }
 
@@ -130,10 +128,9 @@ pub fn yields_section_not_in_docstr_code() -> String {
 }
 pub fn yields_section_not_in_docstr_msg() -> String {
     format!(
-        "{} function/ method that yields a value should have the yields section in the docstring{}{}",
+        "{} function/ method that yields a value should have the yields section in the docstring {}",
         yields_section_not_in_docstr_code(),
-        MORE_INFO_BASE,
-        yields_section_not_in_docstr_code().to_lowercase()
+        create_doc_link(yields_section_not_in_docstr_code())
     )
 }
 
@@ -142,10 +139,9 @@ pub fn yields_section_in_docstr_code() -> String {
 }
 pub fn yields_section_in_docstr_msg() -> String {
     format!(
-        "{} function/ method that does not yield a value should not have the yields section in the docstring{}{}",
+        "{} function/ method that does not yield a value should not have the yields section in the docstring {}",
         yields_section_in_docstr_code(),
-        MORE_INFO_BASE,
-        yields_section_in_docstr_code().to_lowercase()
+        create_doc_link(yields_section_in_docstr_code())
     )
 }
 
@@ -154,11 +150,10 @@ pub fn mult_yields_sections_in_docstr_code() -> String {
 }
 pub fn mult_yields_sections_in_docstr_msg(found: &str) -> String {
     format!(
-        "{} a docstring should only contain a single yields section, found {}{}{}",
+        "{} a docstring should only contain a single yields section, found {} {}",
         mult_yields_sections_in_docstr_code(),
         found,
-        MORE_INFO_BASE,
-        mult_yields_sections_in_docstr_code().to_lowercase()
+        create_doc_link(mult_yields_sections_in_docstr_code())
     )
 }
 
@@ -167,10 +162,9 @@ pub fn raises_section_not_in_docstr_code() -> String {
 }
 pub fn raises_section_not_in_docstr_msg() -> String {
     format!(
-        "{} a function/ method that raises an exception should have the raises section in the docstring {}{}",
+        "{} a function/ method that raises an exception should have the raises section in the docstring {}",
         raises_section_not_in_docstr_code(),
-        MORE_INFO_BASE,
-        raises_section_not_in_docstr_code().to_lowercase()
+        create_doc_link(raises_section_not_in_docstr_code())
     )
 }
 pub fn raises_section_in_docstr_code() -> String {
@@ -178,10 +172,9 @@ pub fn raises_section_in_docstr_code() -> String {
 }
 pub fn raises_section_in_docstr_msg() -> String {
     format!(
-        "{} a function/ method that does not raise an exception should not have the raises section in the docstring {}{}",
+        "{} a function/ method that does not raise an exception should not have the raises section in the docstring {}",
         raises_section_in_docstr_code(),
-        MORE_INFO_BASE,
-        raises_section_in_docstr_code().to_lowercase()
+        create_doc_link(raises_section_in_docstr_code())
     )
 }
 
@@ -190,11 +183,10 @@ pub fn mult_raises_sections_in_docstr_code() -> String {
 }
 pub fn mult_raises_sections_in_docstr_msg(found: &str) -> String {
     format!(
-        "{} a docstring should only contain a single raises section, found {}{}{}",
+        "{} a docstring should only contain a single raises section, found {} {}",
         mult_raises_sections_in_docstr_code(),
         found,
-        MORE_INFO_BASE,
-        mult_raises_sections_in_docstr_code().to_lowercase()
+        create_doc_link(mult_raises_sections_in_docstr_code())
     )
 }
 
@@ -203,11 +195,10 @@ pub fn exc_not_in_docstr_code() -> String {
 }
 pub fn exc_not_in_docstr_msg(_raise: &str) -> String {
     format!(
-        "{} \"{}\" exception should be described in the docstring{}{}",
+        "{} \"{}\" exception should be described in the docstring {}",
         exc_not_in_docstr_code(),
         _raise,
-        MORE_INFO_BASE,
-        exc_not_in_docstr_code().to_lowercase()
+        create_doc_link(exc_not_in_docstr_code())
     )
 }
 
@@ -216,11 +207,10 @@ pub fn exc_in_docstr_code() -> String {
 }
 pub fn exc_in_docstr_msg(_raise: &str) -> String {
     format!(
-        "{} \"{}\" exception should not be described in the docstring{}{}",
+        "{} \"{}\" exception should not be described in the docstring {}",
         exc_in_docstr_code(),
         _raise,
-        MORE_INFO_BASE,
-        exc_in_docstr_code().to_lowercase()
+        create_doc_link(exc_in_docstr_code())
     )
 }
 
@@ -229,10 +219,9 @@ pub fn re_raise_no_exc_in_docstr_code() -> String {
 }
 pub fn re_raise_no_exc_in_docstr_msg() -> String {
     format!(
-        "{} a function/ method that re-raises exceptions should describe at least one exception in the raises section of the docstring{}{}",
+        "{} a function/ method that re-raises exceptions should describe at least one exception in the raises section of the docstring {}",
         re_raise_no_exc_in_docstr_code(),
-        MORE_INFO_BASE,
-        re_raise_no_exc_in_docstr_code().to_lowercase()
+        create_doc_link(re_raise_no_exc_in_docstr_code())
     )
 }
 
@@ -241,11 +230,10 @@ pub fn duplicate_exc_code() -> String {
 }
 pub fn duplicate_exc_msg(_raise: &str) -> String {
     format!(
-        "{} \"{}\" exception documented multiple times{}{}",
+        "{} \"{}\" exception documented multiple times {}",
         duplicate_exc_code(),
         _raise,
-        MORE_INFO_BASE,
-        duplicate_exc_code().to_lowercase()
+        create_doc_link(duplicate_exc_code())
     )
 }
 
@@ -255,10 +243,9 @@ pub fn attrs_section_not_in_docstr_code() -> String {
 
 pub fn attrs_section_not_in_docstr_msg() -> String {
     format!(
-        "{} a class with attributes should have the attributes section in the docstring{}{}",
+        "{} a class with attributes should have the attributes section in the docstring {}",
         attrs_section_not_in_docstr_code(),
-        MORE_INFO_BASE,
-        attrs_section_not_in_docstr_code().to_lowercase()
+        create_doc_link(attrs_section_not_in_docstr_code())
     )
 }
 
@@ -268,10 +255,9 @@ pub fn attrs_section_in_docstr_code() -> String {
 
 pub fn attrs_section_in_docstr_msg() -> String {
     format!(
-        "{} a class without attributes should not have the attributes section in the docstring{}{}",
+        "{} a class without attributes should not have the attributes section in the docstring {}",
         attrs_section_in_docstr_code(),
-        MORE_INFO_BASE,
-        attrs_section_in_docstr_code().to_lowercase()
+        create_doc_link(attrs_section_in_docstr_code())
     )
 }
 pub fn mult_attrs_section_in_docstr_code() -> String {
@@ -280,11 +266,10 @@ pub fn mult_attrs_section_in_docstr_code() -> String {
 
 pub fn mult_attrs_section_in_docstr_msg(_attribute: &str) -> String {
     format!(
-        "{} a docstring should only contain a single attributes section, found {}{}{}",
+        "{} a docstring should only contain a single attributes section, found {} {}",
         mult_attrs_section_in_docstr_code(),
         _attribute,
-        MORE_INFO_BASE,
-        mult_attrs_section_in_docstr_code().to_lowercase()
+        create_doc_link(mult_attrs_section_in_docstr_code())
     )
 }
 
@@ -294,11 +279,10 @@ pub fn attr_not_in_docstr_code() -> String {
 
 pub fn attr_not_in_docstr_msg(_attribute: &str) -> String {
     format!(
-        "{} {} attribute/ property should be described in the docstring {}{}",
+        "{} {} attribute/ property should be described in the docstring {}",
         attr_not_in_docstr_code(),
         _attribute,
-        MORE_INFO_BASE,
-        attr_not_in_docstr_code().to_lowercase()
+        create_doc_link(attr_not_in_docstr_code())
     )
 }
 
@@ -308,11 +292,10 @@ pub fn attr_in_docstr_code() -> String {
 
 pub fn attr_in_docstr_msg(_attribute: &str) -> String {
     format!(
-        "{} {} attribute should not be described in the docstring {}{}",
+        "{} {} attribute should not be described in the docstring {}",
         attr_in_docstr_code(),
         _attribute,
-        MORE_INFO_BASE,
-        attr_in_docstr_code().to_lowercase()
+        create_doc_link(attr_in_docstr_code())
     )
 }
 
@@ -322,10 +305,9 @@ pub fn duplicate_attr_docstr_code() -> String {
 
 pub fn duplicate_attr_docstr_msg(_attribute: &str) -> String {
     format!(
-        "{} {} attribute documented multiple times {}{}",
+        "{} {} attribute documented multiple times {}",
         duplicate_attr_docstr_code(),
         _attribute,
-        MORE_INFO_BASE,
-        attr_in_docstr_code().to_lowercase()
+        create_doc_link(attr_in_docstr_code())
     )
 }
