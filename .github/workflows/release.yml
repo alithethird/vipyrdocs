@@ -44,7 +44,14 @@ jobs:
           profile: minimal
           target: ${{ matrix.target }}
 
-      - name: Build release binary
+      - name: Build release binary (ARM Linux native)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          cargo install cross --git https://github.com/cross-rs/cross
+          cross build --release --target ${{ matrix.target }}
+
+      - name: Build release binary (cross-compile)
+        if: matrix.target != 'aarch64-unknown-linux-gnu'
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Rename binary
@@ -65,7 +72,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Package source code
-        run: tar czvf vipyrdocs-source.tar.gz .
+        uses: a7ul/tar-action@v1.2.0
+        with:
+          command: c
+          cwd: ./
+          files: |
+            src/
+            Cargo.toml
+            Cargo.lock
+            README.md
+          outPath: vipyrdocs-source.tar.gz
+
       - name: Upload source tarball
         uses: actions/upload-artifact@v4
         with:
