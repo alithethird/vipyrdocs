@@ -1,11 +1,11 @@
 pub const ERROR_CODE_PREFIX: &str = "D";
 pub const MORE_INFO_BASE: &str = "https://github.com/alithethird/vipyrdocs/wiki/The-ruleset#"; //" (more info: https://example.com/";
 
-fn create_doc_link(_doc: String, exp: &str) -> String{
+fn create_doc_link(_doc: String, rule_explanation: &str) -> String{
     format!("{}{}{}",
         MORE_INFO_BASE,
         _doc.to_lowercase(),
-        exp,
+        rule_explanation,
            // TODO: Update this when you write the docs
         )
 }
