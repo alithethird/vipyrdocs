@@ -72,7 +72,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Package source code
-        run: tar czvf vipyrdocs-source.tar.gz --exclude='.git' --exclude='.vscode' --exclude='.idea' .
+        run: tar czvf vipyrdocs-source.tar.gz --exclude='.git' --exclude='.github' --exclude='.vscode' --exclude='.idea' .
       - name: Upload source tarball
         uses: actions/upload-artifact@v4
         with:
