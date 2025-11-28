@@ -74,7 +74,7 @@ pub fn arg_in_docstr_msg(_arg: &str) -> String {
         "{} \"{}\" argument should not be described in the docstring {}",
         arg_in_docstr_code(),
         _arg,
-        create_doc_link(arg_in_docstr_code(), "-myterious-argument-in-the-section")
+        create_doc_link(arg_in_docstr_code(), "-mysterious-argument-in-the-section")
     )
 }
 
