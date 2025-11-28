@@ -280,7 +280,7 @@ pub fn attr_not_in_docstr_code() -> String {
 
 pub fn attr_not_in_docstr_msg(_attribute: &str) -> String {
     format!(
-        "{} {} attribute/ property should be described in the docstring {}",
+        "{} {} attribute/property should be described in the docstring {}",
         attr_not_in_docstr_code(),
         _attribute,
         create_doc_link(attr_not_in_docstr_code(), "-missing-attributes-in-the-section")
