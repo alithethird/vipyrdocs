@@ -81,8 +81,8 @@ jobs:
     steps:
       - name: Validate tag format
         run: |
-          if [[ ! "${{ inputs.tag }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Error: Tag must follow semantic versioning format (e.g., v1.0.0)"
+          if [[ ! "${{ inputs.tag }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$ ]]; then
+            echo "Error: Tag must follow semantic versioning format (e.g., v1.0.0, v1.0.0-alpha, v1.0.0+build.1)"
             exit 1
           fi
 
