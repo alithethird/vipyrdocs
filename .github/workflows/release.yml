@@ -44,14 +44,15 @@ jobs:
           profile: minimal
           target: ${{ matrix.target }}
 
-      - name: Build release binary
+      - name: Build release binary (ARM Linux native)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
-          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
-            cargo install cross --git https://github.com/cross-rs/cross && \
-            cross build --release --target ${{ matrix.target }}
-          else
-            cargo build --release --target ${{ matrix.target }}
-          fi
+          cargo install cross --git https://github.com/cross-rs/cross
+          cross build --release --target ${{ matrix.target }}
+
+      - name: Build release binary (cross-compile)
+        if: matrix.target != 'aarch64-unknown-linux-gnu'
+        run: cargo build --release --target ${{ matrix.target }}
 
       - name: Rename binary
         run: |
