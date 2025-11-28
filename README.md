@@ -76,14 +76,6 @@ class MyProcessor2(DataProcessor):
 
 Add a `# vipyrdocs: disable=<CODES>` comment to the end of a `def`/`class` line or statement to silence specific checks (for example, `# vipyrdocs: disable=D020`). Use `ALL` to silence everything for that scope, or `disable-next-docstring`/`disable-file` variants to target the next docstring or whole file when needed.
 
-## 🔮 Roadmap
-
-- Configurable docstring rules
-- Output in JSON / SARIF
-- Git pre-commit hook support
-- VSCode integration
-
-
 ### Ruleset: 29
 
 

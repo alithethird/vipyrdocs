@@ -1,10 +1,11 @@
 pub const ERROR_CODE_PREFIX: &str = "D";
-pub const MORE_INFO_BASE: &str = "https://github.com/alithethird/vipyrdocs/"; //" (more info: https://example.com/";
+pub const MORE_INFO_BASE: &str = "https://github.com/alithethird/vipyrdocs/wiki/The-ruleset#"; //" (more info: https://example.com/";
 
-fn create_doc_link(_doc: String) -> String{
-    format!("{}{}",
+fn create_doc_link(_doc: String, rule_explanation: &str) -> String{
+    format!("{}{}{}",
         MORE_INFO_BASE,
-        "" //_doc.to_lowercase()
+        _doc.to_lowercase(),
+        rule_explanation,
            // TODO: Update this when you write the docs
         )
 }
@@ -14,9 +15,9 @@ pub fn docstr_missing_code() -> String {
 }
 pub fn docstr_missing_msg() -> String {
     format!(
-        "{} docstring should be defined for a function/ method/ class {}",
+        "{} docstring should be defined for a function/ class {}",
         docstr_missing_code(),
-        create_doc_link(docstr_missing_code())
+        create_doc_link(docstr_missing_code(), "-missing-docstring")
     )
 }
 
@@ -25,9 +26,9 @@ pub fn args_section_not_in_docstr_code() -> String {
 }
 pub fn args_section_not_in_docstr_msg() -> String {
     format!(
-        "{} a function/ method with arguments should have the arguments section in the docstring {}",
+        "{} a function with arguments should have the arguments section in the docstring {}",
         args_section_not_in_docstr_code(),
-        create_doc_link(args_section_not_in_docstr_code())
+        create_doc_link(args_section_not_in_docstr_code(), "-missing-args-section")
     )
 }
 
@@ -36,9 +37,9 @@ pub fn args_section_in_docstr_code() -> String {
 }
 pub fn args_section_in_docstr_msg() -> String {
     format!(
-        "{} a function/ method without arguments should not have the arguments section in the docstring {}",
+        "{} a function without arguments should not have the arguments section in the docstring {}",
         args_section_in_docstr_code(),
-        create_doc_link(args_section_in_docstr_code())
+        create_doc_link(args_section_in_docstr_code(), "-extra-args-section")
     )
 }
 
@@ -50,7 +51,7 @@ pub fn mult_args_sections_in_docstr_msg(found: &str) -> String {
         "{} a docstring should only contain a single arguments section, found {} {}",
         mult_args_sections_in_docstr_code(),
         found,
-        create_doc_link(mult_args_sections_in_docstr_code())
+        create_doc_link(mult_args_sections_in_docstr_code(), "-multiple-args-section")
     )
 }
 pub fn arg_not_in_docstr_code() -> String {
@@ -61,7 +62,7 @@ pub fn arg_not_in_docstr_msg(_arg: &str) -> String {
         "{} \"{}\" argument should be described in the docstring {}",
         arg_not_in_docstr_code(),
         _arg,
-        create_doc_link(arg_not_in_docstr_code())
+        create_doc_link(arg_not_in_docstr_code(), "-missing-argument-in-the-section")
     )
 }
 
@@ -73,7 +74,7 @@ pub fn arg_in_docstr_msg(_arg: &str) -> String {
         "{} \"{}\" argument should not be described in the docstring {}",
         arg_in_docstr_code(),
         _arg,
-        create_doc_link(arg_in_docstr_code())
+        create_doc_link(arg_in_docstr_code(), "-mysterious-argument-in-the-section")
     )
 }
 
@@ -85,7 +86,7 @@ pub fn duplicate_arg_msg(_arg: &str) -> String {
         "{} \"{}\" argument documented multiple times {}",
         duplicate_arg_in_docstr_code(),
         _arg,
-        create_doc_link(duplicate_arg_in_docstr_code())
+        create_doc_link(duplicate_arg_in_docstr_code(), "-duplicate-arguments-in-the-section")
     )
 }
 pub fn returns_section_not_in_docstr_code() -> String {
@@ -94,9 +95,9 @@ pub fn returns_section_not_in_docstr_code() -> String {
 
 pub fn returns_section_not_in_docstr_msg() -> String {
     format!(
-        "{} function/ method that returns a value should have the returns section in the docstring {}",
+        "{} function that returns a value should have the returns section in the docstring {}",
         returns_section_not_in_docstr_code(),
-        create_doc_link(returns_section_not_in_docstr_code())
+        create_doc_link(returns_section_not_in_docstr_code(), "-missing-returns-section")
     )
 }
 
@@ -105,9 +106,9 @@ pub fn returns_section_in_docstr_code() -> String {
 }
 pub fn returns_section_in_docstr_msg() -> String {
     format!(
-        "{} function/ method that does not return a value should not have the returns section in the docstring {}",
+        "{} function that does not return a value should not have the returns section in the docstring {}",
         returns_section_in_docstr_code(),
-        create_doc_link(returns_section_in_docstr_code())
+        create_doc_link(returns_section_in_docstr_code(), "-extra-returns-section")
     )
 }
 
@@ -119,7 +120,7 @@ pub fn mult_returns_sections_in_docstr_msg(found: &str) -> String {
         "{} a docstring should only contain a single returns section, found {} {}",
         mult_returns_sections_in_docstr_code(),
         found,
-        create_doc_link(mult_returns_sections_in_docstr_code())
+        create_doc_link(mult_returns_sections_in_docstr_code(), "-multiple-returns-section")
     )
 }
 
@@ -128,9 +129,9 @@ pub fn yields_section_not_in_docstr_code() -> String {
 }
 pub fn yields_section_not_in_docstr_msg() -> String {
     format!(
-        "{} function/ method that yields a value should have the yields section in the docstring {}",
+        "{} function that yields a value should have the yields section in the docstring {}",
         yields_section_not_in_docstr_code(),
-        create_doc_link(yields_section_not_in_docstr_code())
+        create_doc_link(yields_section_not_in_docstr_code(), "-missing-yields-section")
     )
 }
 
@@ -139,9 +140,9 @@ pub fn yields_section_in_docstr_code() -> String {
 }
 pub fn yields_section_in_docstr_msg() -> String {
     format!(
-        "{} function/ method that does not yield a value should not have the yields section in the docstring {}",
+        "{} function that does not yield a value should not have the yields section in the docstring {}",
         yields_section_in_docstr_code(),
-        create_doc_link(yields_section_in_docstr_code())
+        create_doc_link(yields_section_in_docstr_code(), "-extra-yields-section")
     )
 }
 
@@ -153,7 +154,7 @@ pub fn mult_yields_sections_in_docstr_msg(found: &str) -> String {
         "{} a docstring should only contain a single yields section, found {} {}",
         mult_yields_sections_in_docstr_code(),
         found,
-        create_doc_link(mult_yields_sections_in_docstr_code())
+        create_doc_link(mult_yields_sections_in_docstr_code(), "-multiple-yields-section")
     )
 }
 
@@ -162,9 +163,9 @@ pub fn raises_section_not_in_docstr_code() -> String {
 }
 pub fn raises_section_not_in_docstr_msg() -> String {
     format!(
-        "{} a function/ method that raises an exception should have the raises section in the docstring {}",
+        "{} a function that raises an exception should have the raises section in the docstring {}",
         raises_section_not_in_docstr_code(),
-        create_doc_link(raises_section_not_in_docstr_code())
+        create_doc_link(raises_section_not_in_docstr_code(), "-missing-raises-section")
     )
 }
 pub fn raises_section_in_docstr_code() -> String {
@@ -172,9 +173,9 @@ pub fn raises_section_in_docstr_code() -> String {
 }
 pub fn raises_section_in_docstr_msg() -> String {
     format!(
-        "{} a function/ method that does not raise an exception should not have the raises section in the docstring {}",
+        "{} a function that does not raise an exception should not have the raises section in the docstring {}",
         raises_section_in_docstr_code(),
-        create_doc_link(raises_section_in_docstr_code())
+        create_doc_link(raises_section_in_docstr_code(), "-extra-raises-section")
     )
 }
 
@@ -186,7 +187,7 @@ pub fn mult_raises_sections_in_docstr_msg(found: &str) -> String {
         "{} a docstring should only contain a single raises section, found {} {}",
         mult_raises_sections_in_docstr_code(),
         found,
-        create_doc_link(mult_raises_sections_in_docstr_code())
+        create_doc_link(mult_raises_sections_in_docstr_code(), "-multiple-raises-section")
     )
 }
 
@@ -198,7 +199,7 @@ pub fn exc_not_in_docstr_msg(_raise: &str) -> String {
         "{} \"{}\" exception should be described in the docstring {}",
         exc_not_in_docstr_code(),
         _raise,
-        create_doc_link(exc_not_in_docstr_code())
+        create_doc_link(exc_not_in_docstr_code(), "-missing-exception-in-the-section")
     )
 }
 
@@ -210,7 +211,7 @@ pub fn exc_in_docstr_msg(_raise: &str) -> String {
         "{} \"{}\" exception should not be described in the docstring {}",
         exc_in_docstr_code(),
         _raise,
-        create_doc_link(exc_in_docstr_code())
+        create_doc_link(exc_in_docstr_code(), "-mysterious-exception-in-the-section")
     )
 }
 
@@ -219,9 +220,9 @@ pub fn re_raise_no_exc_in_docstr_code() -> String {
 }
 pub fn re_raise_no_exc_in_docstr_msg() -> String {
     format!(
-        "{} a function/ method that re-raises exceptions should describe at least one exception in the raises section of the docstring {}",
+        "{} a function that re-raises exceptions should describe at least one exception in the raises section of the docstring {}",
         re_raise_no_exc_in_docstr_code(),
-        create_doc_link(re_raise_no_exc_in_docstr_code())
+        create_doc_link(re_raise_no_exc_in_docstr_code(), "-missing-re-raised-exception-in-the-section")
     )
 }
 
@@ -233,7 +234,7 @@ pub fn duplicate_exc_msg(_raise: &str) -> String {
         "{} \"{}\" exception documented multiple times {}",
         duplicate_exc_code(),
         _raise,
-        create_doc_link(duplicate_exc_code())
+        create_doc_link(duplicate_exc_code(), "-duplicate-exception-in-the-section")
     )
 }
 
@@ -245,7 +246,7 @@ pub fn attrs_section_not_in_docstr_msg() -> String {
     format!(
         "{} a class with attributes should have the attributes section in the docstring {}",
         attrs_section_not_in_docstr_code(),
-        create_doc_link(attrs_section_not_in_docstr_code())
+        create_doc_link(attrs_section_not_in_docstr_code(), "-missing-attributes-section")
     )
 }
 
@@ -257,7 +258,7 @@ pub fn attrs_section_in_docstr_msg() -> String {
     format!(
         "{} a class without attributes should not have the attributes section in the docstring {}",
         attrs_section_in_docstr_code(),
-        create_doc_link(attrs_section_in_docstr_code())
+        create_doc_link(attrs_section_in_docstr_code(), "-extra-attributes-section")
     )
 }
 pub fn mult_attrs_section_in_docstr_code() -> String {
@@ -269,7 +270,7 @@ pub fn mult_attrs_section_in_docstr_msg(_attribute: &str) -> String {
         "{} a docstring should only contain a single attributes section, found {} {}",
         mult_attrs_section_in_docstr_code(),
         _attribute,
-        create_doc_link(mult_attrs_section_in_docstr_code())
+        create_doc_link(mult_attrs_section_in_docstr_code(), "-multiple-attributes-section")
     )
 }
 
@@ -279,10 +280,10 @@ pub fn attr_not_in_docstr_code() -> String {
 
 pub fn attr_not_in_docstr_msg(_attribute: &str) -> String {
     format!(
-        "{} {} attribute/ property should be described in the docstring {}",
+        "{} {} attribute/property should be described in the docstring {}",
         attr_not_in_docstr_code(),
         _attribute,
-        create_doc_link(attr_not_in_docstr_code())
+        create_doc_link(attr_not_in_docstr_code(), "-missing-attributes-in-the-section")
     )
 }
 
@@ -295,7 +296,7 @@ pub fn attr_in_docstr_msg(_attribute: &str) -> String {
         "{} {} attribute should not be described in the docstring {}",
         attr_in_docstr_code(),
         _attribute,
-        create_doc_link(attr_in_docstr_code())
+        create_doc_link(attr_in_docstr_code(), "-mysterious-attributes-in-the-section")
     )
 }
 
@@ -308,6 +309,6 @@ pub fn duplicate_attr_docstr_msg(_attribute: &str) -> String {
         "{} {} attribute documented multiple times {}",
         duplicate_attr_docstr_code(),
         _attribute,
-        create_doc_link(attr_in_docstr_code())
+        create_doc_link(attr_in_docstr_code(), "-duplicate-attributes-in-the-section")
     )
 }
