@@ -12,7 +12,7 @@ use inheritance::InheritanceTracker;
 #[derive(Parser, Debug)]
 #[command(
     name = "vipyrdocs",
-    version = "0.1.1",
+    version = "0.1.3",
     about = "🐍 vipyrdocs — Fast. Lethal. Python docstring checks.",
     long_about = r#"
 vipyrdocs  — Fast. Lethal. Python docstring checks.
